@@ -22,11 +22,11 @@ impl fmt::Display for LoginError {
 
 impl std::error::Error for LoginError {}
 
+const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
+const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let LOGIN_URL = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
-    let EVENTS_URL = "https://www.rockclimbing.org/index.php/event-list/events-list";
-
     let args = Args::parse();
 
     let client = reqwest::Client::builder()
