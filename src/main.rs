@@ -1,8 +1,9 @@
-use clap::Parser;
-
 mod input;
 
 use input::Web;
+
+use clap::Parser;
+use tracing_subscriber;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -15,10 +16,13 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt::init();
+
     let args = Args::parse();
 
-    let web = Web::new(&args.username, &args.password);
-    web.read().await?;
+    Web::new(&args.username, &args.password)
+     .read()
+     .await?;
 
     Ok(())
 }

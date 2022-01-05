@@ -1,3 +1,5 @@
+use tracing::info;
+
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
 const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list";
 
@@ -18,9 +20,10 @@ impl<'a> Web<'a> {
         let client = create_client()?;
         login(&client, self.username, self.password).await?;
 
+        info!("Fetching events page {}", EVENTS_URL);
         let rsp = client.get(EVENTS_URL).send().await?;
-        let body = rsp.text().await?;
-        println!("{:#?}", body);
+        let _body = rsp.text().await?;
+        // println!("{:#?}", body);
 
         Ok(())
     }
@@ -39,6 +42,8 @@ async fn login<S>(client: &reqwest::Client, username: S, password: S) -> Result<
 where
     S: AsRef<str>
 {
+    info!("Logging into {}", LOGIN_URL);
+
     let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
     let rsp = client.post(LOGIN_URL).form(&login_params).send().await?;
 
