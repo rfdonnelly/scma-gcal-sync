@@ -33,14 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cookie_store(true)
         .user_agent("Mozilla/5.0")
         .build()?;
-    let login_params = [
-        ("username", args.user),
-        ("passwd", args.pass),
-    ];
-    let rsp = client.post(LOGIN_URL)
-        .form(&login_params)
-        .send()
-        .await?;
+    let login_params = [("username", args.user), ("passwd", args.pass)];
+    let rsp = client.post(LOGIN_URL).form(&login_params).send().await?;
     if !rsp.status().is_success() {
         return Err("login failed".into());
     }
@@ -48,9 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("bad username or password".into());
     }
 
-    let rsp = client.get(EVENTS_URL)
-        .send()
-        .await?;
+    let rsp = client.get(EVENTS_URL).send().await?;
     let body = rsp.text().await?;
     println!("{:#?}", body);
 
