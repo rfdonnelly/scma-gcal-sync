@@ -9,8 +9,8 @@ use select::predicate::{
 use tracing::info;
 
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::path::Path;
-use std::marker::PhantomData;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
@@ -36,7 +36,7 @@ impl<'a> Web<'a> {
 
         info!("Fetching event list page {}", EVENTS_URL);
         let events_page = Page::from_url(&client, EVENTS_URL).await?;
-        let event_urls = Page::<Vec<Url>>::parse(events_page)?;
+        let event_urls = EventUrls::try_from(events_page)?;
         info!("Parsed event URLs {:?}", event_urls);
 
         let events: Vec<Event> = stream::iter(event_urls)
@@ -45,7 +45,7 @@ impl<'a> Web<'a> {
                 async move {
                     info!("Fetching event from {}", event_url);
                     let event_page = Page::from_url(&client, &event_url).await?;
-                    let event = Page::<Event>::parse(event_page)?;
+                    let event = Event::try_from(event_page)?;
                     info!("Parsed {:?}", event);
                     Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
@@ -85,31 +85,34 @@ where
 }
 
 #[derive(Debug)]
-struct Page<T> {
+struct Page {
     text: String,
-    phantom: PhantomData<T>,
 }
 
-impl<T> Page<T> {
+impl Page {
     async fn from_url(client: &reqwest::Client, url: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let rsp = client.get(url).send().await?;
         let text = rsp.text().await?;
 
-        Ok(Self { text, phantom: PhantomData })
+        Ok(Self { text })
     }
 
     fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let text = std::fs::read_to_string(path)?;
 
-        Ok(Self { text, phantom: PhantomData })
+        Ok(Self { text })
     }
 }
 
 type Url = String;
+#[derive(Debug)]
+struct EventUrls(Vec<Url>);
 
-impl Page<Vec<Url>> {
-    fn parse(self) -> Result<Vec<Url>, Box<dyn std::error::Error>> {
-        let document = Document::from(self.text.as_str());
+impl TryFrom<Page> for EventUrls {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
+        let document = Document::from(page.text.as_str());
 
         let node = document.find(Class("ohanah")).next().unwrap();
         let urls = node
@@ -120,12 +123,23 @@ impl Page<Vec<Url>> {
                 urls
             });
 
-        Ok(Vec::from_iter(urls))
+        Ok(EventUrls(Vec::from_iter(urls)))
     }
 }
 
-impl Page<Event> {
-    fn parse(self) -> Result<Event, Box<dyn std::error::Error>> {
+impl IntoIterator for EventUrls {
+    type Item = Url;
+    type IntoIter = std::vec::IntoIter<Url>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl TryFrom<Page> for Event {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
         Ok(Default::default())
     }
 }
@@ -141,10 +155,10 @@ mod test {
         let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "events-list.html"].iter().collect();
         let page = Page::from_file(path).unwrap();
         let urls = {
-            let mut urls = Page::<Vec<Url>>::parse(page).unwrap();
-            urls.sort();
+            let mut urls = EventUrls::try_from(page).unwrap();
+            urls.0.sort();
             urls
         };
-        insta::assert_yaml_snapshot!(urls);
+        insta::assert_yaml_snapshot!(urls.0);
     }
 }
