@@ -37,14 +37,47 @@ impl<'a> Web<'a> {
     }
 
     pub async fn read(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
-        let client = create_client()?;
-        login(&client, self.username, self.password).await?;
+        let client = Self::create_client()?;
+        Self::login(&client, self.username, self.password).await?;
 
         info!("Fetching event list page {}", EVENTS_URL);
         let events_page = Page::from_url(&client, EVENTS_URL).await?;
         let event_urls = EventUrls::try_from(events_page)?;
         info!("Parsed event URLs {:?}", event_urls);
 
+        let events = Self::fetch_events(&client, event_urls).await?;
+
+        Ok(events)
+    }
+
+    fn create_client() -> Result<reqwest::Client, Box<dyn std::error::Error>> {
+        Ok(
+            reqwest::Client::builder()
+                .cookie_store(true)
+                .user_agent("Mozilla/5.0")
+                .build()?
+        )
+    }
+
+    async fn login<S>(client: &reqwest::Client, username: S, password: S) -> Result<(), Box<dyn std::error::Error>>
+    where
+        S: AsRef<str>
+    {
+        info!("Logging into {}", LOGIN_URL);
+
+        let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
+        let rsp = client.post(LOGIN_URL).form(&login_params).send().await?;
+
+        if !rsp.status().is_success() {
+            Err("login failed".into())
+        } else if rsp.url().path() != "/" {
+            Err("bad username or password".into())
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn fetch_events(client: &reqwest::Client, event_urls: EventUrls) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events = stream::iter(event_urls)
             .map(|event_url| {
                 let client = &client;
@@ -61,33 +94,6 @@ impl<'a> Web<'a> {
             .tap_mut(|events| events.sort_by_key(|event| event.start_date));
 
         Ok(events)
-    }
-}
-
-fn create_client() -> Result<reqwest::Client, Box<dyn std::error::Error>> {
-    Ok(
-        reqwest::Client::builder()
-            .cookie_store(true)
-            .user_agent("Mozilla/5.0")
-            .build()?
-    )
-}
-
-async fn login<S>(client: &reqwest::Client, username: S, password: S) -> Result<(), Box<dyn std::error::Error>>
-where
-    S: AsRef<str>
-{
-    info!("Logging into {}", LOGIN_URL);
-
-    let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
-    let rsp = client.post(LOGIN_URL).form(&login_params).send().await?;
-
-    if !rsp.status().is_success() {
-        Err("login failed".into())
-    } else if rsp.url().path() != "/" {
-        Err("bad username or password".into())
-    } else {
-        Ok(())
     }
 }
 
