@@ -292,15 +292,23 @@ mod test {
         }
     }
 
+    /// The order of the URLs may change from run to run since we use a HashSet to collect them
+    /// internally.  The order doesn't matter except when we want test it in a consistent manner.
+    /// This impl provides a sort method to simplify checking against a fixed expectation.
+    impl EventUrls {
+        fn sort(mut self) -> Self {
+            self.0.sort();
+            self
+        }
+    }
+
     #[test]
     fn parse_event_list_page() {
         let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "events-list.html"].iter().collect();
         let page = Page::from_file(path).unwrap();
-        let urls = {
-            let mut urls = EventUrls::try_from(page).unwrap();
-            urls.0.sort();
-            urls
-        };
+        let urls = EventUrls::try_from(page)
+            .unwrap()
+            .sort();
         insta::assert_yaml_snapshot!(urls.0);
     }
 
