@@ -16,7 +16,6 @@ use tracing::info;
 
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::path::Path;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
@@ -99,12 +98,6 @@ impl Page {
     async fn from_url(client: &reqwest::Client, url: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let rsp = client.get(url).send().await?;
         let text = rsp.text().await?;
-
-        Ok(Self { text })
-    }
-
-    fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let text = std::fs::read_to_string(path)?;
 
         Ok(Self { text })
     }
@@ -281,7 +274,15 @@ impl TryFrom<Page> for Event {
 mod test {
     use super::*;
 
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
+
+    impl Page {
+        fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+            let text = std::fs::read_to_string(path)?;
+
+            Ok(Self { text })
+        }
+    }
 
     #[test]
     fn parse_event_list_page() {
