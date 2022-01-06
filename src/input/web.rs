@@ -1,8 +1,14 @@
-use crate::model::Event;
+use crate::model::{
+    Attendee,
+    Comment,
+    Event,
+};
 
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
 use select::predicate::{
+    And,
+    Attr,
     Class,
     Name,
 };
@@ -140,7 +146,134 @@ impl TryFrom<Page> for Event {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        Ok(Default::default())
+        let document = Document::from(page.text.as_str());
+
+        let title = document
+            .find(And(Name("meta"), Attr("property", "og:title")))
+            .next()
+            .unwrap()
+            .attr("content")
+            .unwrap()
+            .to_string();
+
+        let url = document
+            .find(Name("base"))
+            .next()
+            .unwrap()
+            .attr("href")
+            .unwrap()
+            .to_string();
+
+        let start_date = document
+            .find(And(Name("span"), Attr("itemprop", "startDate")))
+            .next()
+            .unwrap()
+            .attr("content")
+            .unwrap()
+            .to_string();
+
+        let end_date = document
+            .find(And(Name("span"), Attr("itemprop", "endDate")))
+            .next()
+            .unwrap()
+            .attr("content")
+            .unwrap()
+            .to_string();
+
+        let location = document
+            .find(And(Name("h3"), Attr("itemprop", "location")))
+            .next()
+            .unwrap()
+            .text()
+            .trim()
+            .to_string();
+
+        let description = document
+            .find(And(Name("div"), Attr("itemprop", "description")))
+            .next()
+            .unwrap()
+            .find(Name("div"))
+            .map(|div| div.text())
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        let comments = document
+            .find(Class("kmt-wrap"))
+            .map(|node| {
+                let author = node
+                    .find(Class("kmt-author"))
+                    .next()
+                    .unwrap()
+                    .text()
+                    .trim()
+                    .to_string();
+
+                let date = node
+                    .find(And(Name("time"), Attr("itemprop", "dateCreated")))
+                    .next()
+                    .unwrap()
+                    .attr("datetime")
+                    .unwrap()
+                    .to_string();
+
+                let text = node
+                    .find(Class("kmt-body"))
+                    .next()
+                    .unwrap()
+                    .text()
+                    .trim()
+                    .to_string();
+
+                Comment {
+                    author,
+                    date,
+                    text,
+                }
+            })
+            .collect();
+
+        let attendee_names = document
+            .find(Class("attendee_name"))
+            .map(|node| node.text());
+        let attendee_comments = document
+            .find(Class("number_of_tickets"))
+            .map(|node| node.text());
+        let attendees = attendee_names.zip(attendee_comments)
+            .map(|(name, comment)| {
+                let count = comment
+                    .split_once(" ")
+                    .unwrap()
+                    .0[1..]
+                    .parse()
+                    .unwrap();
+
+                let comment = comment
+                    .split_once(")")
+                    .unwrap()
+                    .1
+                    .trim()
+                    .to_string();
+
+                Attendee {
+                    name,
+                    count,
+                    comment,
+                }
+            })
+            .collect();
+
+        let event = Event {
+            title,
+            url,
+            start_date,
+            end_date,
+            location,
+            description,
+            comments,
+            attendees,
+        };
+
+        Ok(event)
     }
 }
 
@@ -160,5 +293,13 @@ mod test {
             urls
         };
         insta::assert_yaml_snapshot!(urls.0);
+    }
+
+    #[test]
+    fn parse_event() {
+        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "event-0.html"].iter().collect();
+        let page = Page::from_file(path).unwrap();
+        let event = Event::try_from(page).unwrap();
+        insta::assert_yaml_snapshot!(event);
     }
 }

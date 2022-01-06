@@ -1,25 +1,27 @@
-#[derive(Debug, Default)]
+use serde::Serialize;
+
+#[derive(Debug, Default, Serialize)]
 pub struct Event {
-    name: String,
-    url: String,
-    start_date: String,
-    end_date: String,
-    location: String,
-    description: String,
-    comments: Vec<Comment>,
-    attendees: Vec<Attendee>,
+    pub title: String,
+    pub url: String,
+    pub start_date: String,
+    pub end_date: String,
+    pub location: String,
+    pub description: String,
+    pub comments: Vec<Comment>,
+    pub attendees: Vec<Attendee>,
 }
 
-#[derive(Debug, Default)]
-pub struct Attendee {
-    name: String,
-    count: u8,
-    comment: String,
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct Comment {
-    author: String,
-    timestamp: String,
-    text: String,
+    pub author: String,
+    pub date: String,
+    pub text: String,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub struct Attendee {
+    pub name: String,
+    pub count: u8,
+    pub comment: String,
 }

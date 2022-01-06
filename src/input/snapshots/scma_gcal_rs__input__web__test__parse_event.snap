@@ -1,0 +1,57 @@
+---
+source: src/input/web.rs
+assertion_line: 303
+expression: event
+
+---
+title: "Joshua Tree [G]"
+url: "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-36"
+start_date: 2022-01-14
+end_date: 2022-01-17
+location: Joshua Tree NP Ryan Campground
+description: "Camping Fri, Sat, and Sun nights at Joshua Tree NP, Ryan Campground.\nFri, Sat, and Sun nights : Three campsites:\n\t#2 (2 parking spaces)\n\t#3 (2 parking spaces)\n\t#4 (2 parking spaces)\n\t\nTrip leader:LeRoy Russ"
+comments:
+  - author: Ming Hsieh
+    date: "2022-01-03T20:10:12-08:00"
+    text: "Just to confirm - we have site 2, 3, 4 for Friday, Saturday, and Sunday. Please ignore the typo above. Thanks!"
+  - author: Jesica Doane
+    date: "2022-01-04T14:10:35-08:00"
+    text: "Ming, how many people/cars total do the 3 campsites accommodate?"
+  - author: Rob Donnelly
+    date: "2022-01-04T15:05:44-08:00"
+    text: "Officially 5 cars total but there is enough room for 6.  There is also a bathroom between sites 4 and 5 that can accommodate two cars.  There is no sign that says you can't overnight park there.  There is also room for 3 cars at the campground entrance.  Again no sign that says you can't park overnight there.  Beyond that, there is always the option of asking neighbors if they'd be nice enough to let you use their extra spot.\n\nEach site accommodates 6 ppl officially.\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\n\t\tComment last edited on 1 day ago by Rob Donnelly\n\t\n\t\t\n\t\tRob Donnelly"
+attendees:
+  - name: Alison Annunziata
+    count: 1
+    comment: saturday night and sunday night (if we have the site for sunday)
+  - name: Doug Whitener
+    count: 1
+    comment: ""
+  - name: Doug Whitener
+    count: 1
+    comment: ""
+  - name: Pedro Uranga
+    count: 1
+    comment: Friday and Saturday night
+  - name: Janice Muscio
+    count: 1
+    comment: 1 parking space..sleep in my vehicle
+  - name: Juan Carlos Marvizon
+    count: 1
+    comment: One car. Friday through Monday.
+  - name: William Nicolas
+    count: 2
+    comment: "Will maybe climb\n\nSleep in my vehicle\n\nSaturday night"
+  - name: Ameera Abdelaziz
+    count: 2
+    comment: ""
+  - name: Yvonne Tsai
+    count: 1
+    comment: "Need one parking space, will sleep in my car."
+  - name: Rob Donnelly
+    count: 1
+    comment: Maybe 1 night or day trip.
+  - name: Jesica Doane
+    count: 1
+    comment: Possibly camping Saturday night
+
