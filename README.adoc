@@ -1,0 +1,50 @@
+= SCMA Google Calendar Sync
+
+Synchronizes calendar events from the link:https://rockclimbing.org[Southern California Mountaineer's Association (SCMA) website] to Google Calendar.
+
+== Credentials
+
+SCMA website username::
+Specified via the `SCMA_USERNAME` environment variable or the `-u|--username` option.
+
+SCMA website password::
+Specified via the `SCMA_PASSWORD` environment variable or the `-p|--password` option.
+
+Google Calendar::
+TBD
+
+== Logging
+
+Logging is available via the `RUST_LOG` environment variable.
+Use `RUST_LOG=info`.
+
+[source,sh]
+.Logging Example
+----
+RUST_LOG=info scma-gcal-sync
+----
+
+== Examples
+
+=== Web to YAML
+
+Fetches events from the SCMA website and converts them to YAML.
+
+ scma-gcal-sync -u <scma-username> -p <scma-password> > events.yml
+
+=== YAML to GCal
+
+TBD
+
+=== Web to GCAL
+
+TBD
+
+== Limitations
+
+Only all-day events are supported.
+SCMA events that are not all-day events are converted to all-day events.
+Effectively, the time information is stripped.
+
+Pagination is not supported.
+SCMA events that are not on the first page of the events list are ignored.
