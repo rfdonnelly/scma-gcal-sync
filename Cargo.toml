@@ -1,7 +1,9 @@
 [package]
-name = "scma-gcal-rs"
+name = "scma-gcal-sync"
 version = "0.1.0"
 edition = "2021"
+authors = ["Rob Donnelly <rfdonnelly@gmail.com>"]
+description = "Synchronizes calendar events from the Southern California Mountaineers Association (SCMA) website to Google Calendar"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
