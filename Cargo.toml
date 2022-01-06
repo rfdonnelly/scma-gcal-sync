@@ -3,7 +3,7 @@ name = "scma-gcal-sync"
 version = "0.1.0"
 edition = "2021"
 authors = ["Rob Donnelly <rfdonnelly@gmail.com>"]
-description = "Synchronizes calendar events from the Southern California Mountaineers Association (SCMA) website to Google Calendar"
+description = "Synchronizes Southern California Mountaineers Association (SCMA) calendar events to Google Calendar"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rfdonnelly/scma-gcal-sync"
 

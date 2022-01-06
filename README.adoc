@@ -1,6 +1,6 @@
 = SCMA Google Calendar Sync
 
-Synchronizes calendar events from the link:https://rockclimbing.org[Southern California Mountaineer's Association (SCMA) website] to Google Calendar.
+Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Association (SCMA)] calendar events to Google Calendar.
 
 == Credentials
 
