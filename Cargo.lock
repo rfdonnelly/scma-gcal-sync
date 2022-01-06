@@ -1163,6 +1163,7 @@ dependencies = [
  "reqwest",
  "select",
  "serde",
+ "serde_yaml",
  "tokio",
  "tracing",
  "tracing-subscriber",

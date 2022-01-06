@@ -23,10 +23,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let events = Web::new(&args.username, &args.password)
-     .read()
-     .await?;
+        .read()
+        .await?;
 
-    info!(?events);
+    println!("{}", serde_yaml::to_string(&events)?);
 
     Ok(())
 }
