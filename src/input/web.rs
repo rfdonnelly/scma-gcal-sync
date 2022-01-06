@@ -1,3 +1,5 @@
+use crate::model::Event;
+
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
 use select::predicate::{
@@ -7,8 +9,8 @@ use select::predicate::{
 use tracing::info;
 
 use std::collections::HashSet;
-use std::fmt;
-use std::str::FromStr;
+use std::path::Path;
+use std::marker::PhantomData;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
@@ -33,19 +35,17 @@ impl<'a> Web<'a> {
         login(&client, self.username, self.password).await?;
 
         info!("Fetching event list page {}", EVENTS_URL);
-        let rsp = client.get(EVENTS_URL).send().await?;
-        let text = rsp.text().await?;
-        let events_page = EventListPage::from_str(&text)?;
-        info!("Parsed events\n{}", events_page);
-        let urls = events_page.event_links;
-        let events: Vec<Event> = stream::iter(urls)
-            .map(|url| {
+        let events_page = Page::from_url(&client, EVENTS_URL).await?;
+        let event_urls = Page::<Vec<Url>>::parse(events_page)?;
+        info!("Parsed event URLs {:?}", event_urls);
+
+        let events: Vec<Event> = stream::iter(event_urls)
+            .map(|event_url| {
                 let client = &client;
                 async move {
-                    info!("Fetching event from {}", url);
-                    let rsp = client.get(&url).send().await?;
-                    let text = rsp.text().await?;
-                    let event = Event::from_str(&text, url)?;
+                    info!("Fetching event from {}", event_url);
+                    let event_page = Page::from_url(&client, &event_url).await?;
+                    let event = Page::<Event>::parse(event_page)?;
                     info!("Parsed {:?}", event);
                     Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
@@ -84,47 +84,67 @@ where
     }
 }
 
-struct EventListPage {
-    event_links: HashSet<String>,
+#[derive(Debug)]
+struct Page<T> {
+    text: String,
+    phantom: PhantomData<T>,
 }
 
-impl fmt::Display for EventListPage {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for link in &self.event_links {
-            writeln!(f, "{link}")?;
-        }
+impl<T> Page<T> {
+    async fn from_url(client: &reqwest::Client, url: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let rsp = client.get(url).send().await?;
+        let text = rsp.text().await?;
 
-        Ok(())
+        Ok(Self { text, phantom: PhantomData })
+    }
+
+    fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+        let text = std::fs::read_to_string(path)?;
+
+        Ok(Self { text, phantom: PhantomData })
     }
 }
 
-impl FromStr for EventListPage {
-    type Err = Box<dyn std::error::Error>;
+type Url = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let document = Document::from(s);
+impl Page<Vec<Url>> {
+    fn parse(self) -> Result<Vec<Url>, Box<dyn std::error::Error>> {
+        let document = Document::from(self.text.as_str());
 
         let node = document.find(Class("ohanah")).next().unwrap();
-        let mut event_links: HashSet<String> = HashSet::new();
-        for link in node.find(Name("a")) {
-            let href = link.attr("href").unwrap();
-            event_links.insert(format!("{BASE_URL}{href}"));
-        }
+        let urls = node
+            .find(Name("a"))
+            .fold(HashSet::new(), |mut urls, elem| {
+                let href = elem.attr("href").unwrap();
+                urls.insert(format!("{BASE_URL}{href}"));
+                urls
+            });
 
-        Ok(EventListPage { event_links })
+        Ok(Vec::from_iter(urls))
     }
 }
 
-#[derive(Debug, Default)]
-struct Event {
-    name: String,
-    link: String,
+impl Page<Event> {
+    fn parse(self) -> Result<Event, Box<dyn std::error::Error>> {
+        Ok(Default::default())
+    }
 }
 
-impl Event {
-    fn from_str(s: &str, link: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let name = link.clone();
+#[cfg(test)]
+mod test {
+    use super::*;
 
-        Ok(Event { name, link })
+    use std::path::PathBuf;
+
+    #[test]
+    fn parse_event_list_page() {
+        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "events-list.html"].iter().collect();
+        let page = Page::from_file(path).unwrap();
+        let urls = {
+            let mut urls = Page::<Vec<Url>>::parse(page).unwrap();
+            urls.sort();
+            urls
+        };
+        insta::assert_yaml_snapshot!(urls);
     }
 }

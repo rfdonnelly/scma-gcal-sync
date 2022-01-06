@@ -13,3 +13,6 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.2"
 select = "0.5.0"
+
+[dev-dependencies]
+insta = "1.10.0"

@@ -1,0 +1,21 @@
+---
+source: src/input/web.rs
+assertion_line: 148
+expression: urls
+
+---
+- "https://www.rockclimbing.org/index.php/event-list/events-list/copy-of-copy-of-copy-of-alabama-hills-rcsc-graduationk-1-1-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/copy-of-copy-of-rcsc-2-2-1-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/copy-of-copy-of-rcsc-3-4-1-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/copy-of-copy-of-rcsc-4-2-1-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/copy-of-copy-of-rcsc-5-3-1-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/courtright-reservoir-g-6"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-36"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-37"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-38"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-39"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/leavenworth-wa"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/north-cascades-national-park-wa-1"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/ranier-national-park"
+- "https://www.rockclimbing.org/index.php/event-list/events-list/safety-evaluation-14"
+
