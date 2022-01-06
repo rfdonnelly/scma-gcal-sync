@@ -90,8 +90,12 @@ where
 }
 
 #[derive(Debug)]
-struct Page {
-    text: String,
+struct Page(String);
+
+impl AsRef<str> for Page {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
 }
 
 impl Page {
@@ -99,7 +103,7 @@ impl Page {
         let rsp = client.get(url).send().await?;
         let text = rsp.text().await?;
 
-        Ok(Self { text })
+        Ok(Self(text))
     }
 }
 
@@ -111,7 +115,7 @@ impl TryFrom<Page> for EventUrls {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let document = Document::from(page.text.as_str());
+        let document = Document::from(page.as_ref());
 
         let node = document.find(Class("ohanah")).next().unwrap();
         let urls = node
@@ -139,7 +143,7 @@ impl TryFrom<Page> for Event {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let document = Document::from(page.text.as_str());
+        let document = Document::from(page.as_ref());
 
         let title = document
             .find(And(Name("meta"), Attr("property", "og:title")))
@@ -280,7 +284,7 @@ mod test {
         fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
             let text = std::fs::read_to_string(path)?;
 
-            Ok(Self { text })
+            Ok(Self(text))
         }
     }
 
