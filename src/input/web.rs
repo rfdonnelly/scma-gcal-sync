@@ -168,7 +168,7 @@ impl TryFrom<Page> for Event {
             .unwrap()
             .attr("content")
             .unwrap()
-            .to_string();
+            .parse()?;
 
         let end_date = document
             .find(And(Name("span"), Attr("itemprop", "endDate")))
@@ -176,7 +176,7 @@ impl TryFrom<Page> for Event {
             .unwrap()
             .attr("content")
             .unwrap()
-            .to_string();
+            .parse()?;
 
         let location = document
             .find(And(Name("h3"), Attr("itemprop", "location")))
@@ -212,7 +212,8 @@ impl TryFrom<Page> for Event {
                     .unwrap()
                     .attr("datetime")
                     .unwrap()
-                    .to_string();
+                    .parse()
+                    .unwrap();
 
                 let text = node
                     .find(Class("kmt-body"))
