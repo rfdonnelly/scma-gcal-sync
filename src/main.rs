@@ -10,9 +10,9 @@ use tracing_subscriber;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
-    #[clap(short, long)]
+    #[clap(short, long, env="SCMA_USERNAME")]
     username: String,
-    #[clap(short, long)]
+    #[clap(short, long, env="SCMA_PASSWORD")]
     password: String,
 }
 
