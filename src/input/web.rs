@@ -12,6 +12,7 @@ use select::predicate::{
     Class,
     Name,
 };
+use tap::prelude::*;
 use tracing::info;
 
 use std::collections::HashSet;
@@ -56,7 +57,8 @@ impl<'a> Web<'a> {
                 }
             })
             .buffer_unordered(CONCURRENT_REQUESTS)
-            .try_collect().await?;
+            .try_collect::<Vec<_>>().await?
+            .tap_mut(|events| events.sort_by_key(|event| event.start_date));
 
         Ok(events)
     }
