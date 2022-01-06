@@ -302,9 +302,15 @@ mod test {
         }
     }
 
+    fn path_to_input(filename: &str) -> PathBuf {
+        [env!("CARGO_MANIFEST_DIR"), "test", "inputs", filename]
+            .iter()
+            .collect()
+    }
+
     #[test]
     fn parse_event_list_page() {
-        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "events-list.html"].iter().collect();
+        let path = path_to_input("events-list.html");
         let page = Page::from_file(path).unwrap();
         let urls = EventUrls::try_from(page)
             .unwrap()
@@ -314,7 +320,7 @@ mod test {
 
     #[test]
     fn parse_event() {
-        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "inputs", "event-0.html"].iter().collect();
+        let path = path_to_input("event-0.html");
         let page = Page::from_file(path).unwrap();
         let event = Event::try_from(page).unwrap();
         insta::assert_yaml_snapshot!(event);
