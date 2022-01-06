@@ -4,7 +4,6 @@ mod model;
 use input::Web;
 
 use clap::Parser;
-use tracing::info;
 use tracing_subscriber;
 
 #[derive(Parser, Debug)]
