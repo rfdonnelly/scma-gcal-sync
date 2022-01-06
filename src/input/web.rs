@@ -38,21 +38,20 @@ impl<'a> Web<'a> {
         let events_page = EventListPage::from_str(&text)?;
         info!("Parsed events\n{}", events_page);
         let urls = events_page.event_links;
-        let events: Result<Vec<Event>, Box<dyn std::error::Error>> = stream::iter(urls)
+        let events: Vec<Event> = stream::iter(urls)
             .map(|url| {
                 let client = &client;
                 async move {
                     info!("Fetching event from {}", url);
                     let rsp = client.get(&url).send().await?;
                     let text = rsp.text().await?;
-                    info!("Fetched event from {}", url);
-                    Event::from_str(&text, url)
+                    let event = Event::from_str(&text, url)?;
+                    info!("Parsed {:?}", event);
+                    Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
             })
             .buffer_unordered(CONCURRENT_REQUESTS)
-            .try_collect().await;
-
-        info!("Parsed events {:?}", events);
+            .try_collect().await?;
 
         Ok(())
     }
