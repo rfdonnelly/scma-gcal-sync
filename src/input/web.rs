@@ -92,6 +92,7 @@ where
 #[derive(Debug)]
 struct Page(String);
 
+/// Accessor for the Page's content
 impl AsRef<str> for Page {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
