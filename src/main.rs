@@ -4,6 +4,7 @@ mod model;
 use input::Web;
 
 use clap::Parser;
+use tracing::info;
 use tracing_subscriber;
 
 #[derive(Parser, Debug)]
@@ -21,9 +22,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    Web::new(&args.username, &args.password)
+    let events = Web::new(&args.username, &args.password)
      .read()
      .await?;
+
+    info!(?events);
 
     Ok(())
 }

@@ -35,7 +35,7 @@ impl<'a> Web<'a> {
         }
     }
 
-    pub async fn read(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn read(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let client = create_client()?;
         login(&client, self.username, self.password).await?;
 
@@ -44,7 +44,7 @@ impl<'a> Web<'a> {
         let event_urls = EventUrls::try_from(events_page)?;
         info!("Parsed event URLs {:?}", event_urls);
 
-        let events: Vec<Event> = stream::iter(event_urls)
+        let events = stream::iter(event_urls)
             .map(|event_url| {
                 let client = &client;
                 async move {
@@ -58,7 +58,7 @@ impl<'a> Web<'a> {
             .buffer_unordered(CONCURRENT_REQUESTS)
             .try_collect().await?;
 
-        Ok(())
+        Ok(events)
     }
 }
 
