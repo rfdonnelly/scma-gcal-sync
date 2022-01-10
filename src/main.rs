@@ -5,6 +5,7 @@ mod output;
 use input::Web;
 use output::GCal;
 
+use chrono::Local;
 use clap::{
     ArgEnum,
     Parser,
@@ -51,6 +52,11 @@ struct Args {
     #[clap(arg_enum, short, long, default_value="gcal")]
     output: OutputType,
 
+    /// Includes past events. Sync is limited to present (active) and future events by default.
+    /// This option will sync all events (past, present, and future).
+    #[clap(long)]
+    all: bool,
+
     /// The name of the input file to use for the yaml input.
     #[clap(parse(from_str), long="ifile", default_value="-")]
     input_file: PipeFile,
@@ -88,9 +94,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
+    let min_date = if args.all {
+        None
+    } else {
+        Some(Local::today().naive_local())
+    };
+
     let events = match args.input {
         InputType::Web => {
-            Web::new(&args.username, &args.password)
+            Web::new(&args.username, &args.password, min_date)
                 .read()
                 .await?
         }

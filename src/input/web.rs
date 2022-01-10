@@ -4,6 +4,7 @@ use crate::model::{
     Event,
 };
 
+use chrono::NaiveDate;
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
 use select::node::Node;
@@ -27,13 +28,15 @@ const CONCURRENT_REQUESTS: usize = 3;
 pub struct Web<'a> {
     username: &'a str,
     password: &'a str,
+    min_date: Option<NaiveDate>,
 }
 
 impl<'a> Web<'a> {
-    pub fn new(username: &'a str, password: &'a str) -> Self {
+    pub fn new(username: &'a str, password: &'a str, min_date: Option<NaiveDate>) -> Self {
         Self {
-            username: username,
-            password: password,
+            username,
+            password,
+            min_date,
         }
     }
 
@@ -44,6 +47,13 @@ impl<'a> Web<'a> {
         info!("Fetching event list page {}", EVENTS_URL);
         let events_page = Page::from_url(&client, EVENTS_URL).await?;
         let events = EventList::try_from(events_page)?;
+
+        let events = match self.min_date {
+            None => events,
+            Some(min_date) => events.into_iter()
+                .filter(|event| event.end_date > min_date)
+                .collect(),
+        };
 
         let events = Self::fetch_events(&client, events).await?;
 
@@ -240,6 +250,12 @@ impl IntoIterator for EventList {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl FromIterator<Event> for EventList {
+    fn from_iter<I: IntoIterator<Item=Event>>(iter: I) -> Self {
+        Self(Vec::from_iter(iter))
     }
 }
 
