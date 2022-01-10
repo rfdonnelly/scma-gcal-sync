@@ -13,6 +13,8 @@ use clap::{
 use tracing::info;
 use tracing_subscriber;
 
+const BASE_URL: &str = "https://www.rockclimbing.org";
+
 #[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
 enum InputType {
     Web,
@@ -102,9 +104,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let events = match args.input {
         InputType::Web => {
-            Web::new(&args.username, &args.password, min_date)
-                .read()
-                .await?
+            Web::new(
+                &args.username,
+                &args.password,
+                BASE_URL,
+                min_date
+            ).read().await?
         }
         InputType::YAML => {
             info!(?args.input_file, "Loading events from");

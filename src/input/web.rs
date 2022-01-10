@@ -20,33 +20,40 @@ use tracing::info;
 
 use std::convert::TryFrom;
 
-const BASE_URL: &str = "https://www.rockclimbing.org";
-const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
-const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
+const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
+const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
     username: &'a str,
     password: &'a str,
+    base_url: &'a str,
     min_date: Option<NaiveDate>,
 }
 
 impl<'a> Web<'a> {
-    pub fn new(username: &'a str, password: &'a str, min_date: Option<NaiveDate>) -> Self {
+    pub fn new(
+        username: &'a str,
+        password: &'a str,
+        base_url: &'a str,
+        min_date: Option<NaiveDate>
+    ) -> Self {
         Self {
             username,
             password,
+            base_url,
             min_date,
         }
     }
 
     pub async fn read(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let client = Self::create_client()?;
-        Self::login(&client, self.username, self.password).await?;
+        self.login(&client, self.username, self.password).await?;
 
-        info!("Fetching event list page {}", EVENTS_URL);
-        let events_page = Page::from_url(&client, EVENTS_URL).await?;
-        let events = EventList::try_from(events_page)?;
+        let events_url = [self.base_url, EVENTS_PATH].join("");
+        info!("Fetching event list page {}", events_url);
+        let events_page = Page::from_url(&client, &events_url).await?;
+        let events = EventList::try_from((self.base_url, events_page))?;
 
         let events = match self.min_date {
             None => events,
@@ -69,14 +76,16 @@ impl<'a> Web<'a> {
         )
     }
 
-    async fn login<S>(client: &reqwest::Client, username: S, password: S) -> Result<(), Box<dyn std::error::Error>>
+    async fn login<S>(&self, client: &reqwest::Client, username: S, password: S) -> Result<(), Box<dyn std::error::Error>>
     where
         S: AsRef<str>
     {
-        info!("Logging into {}", LOGIN_URL);
+        let url = [self.base_url, LOGIN_PATH].join("");
+
+        info!("Logging into {}", url);
 
         let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
-        let rsp = client.post(LOGIN_URL).form(&login_params).send().await?;
+        let rsp = client.post(url).form(&login_params).send().await?;
 
         if !rsp.status().is_success() {
             Err("login failed".into())
@@ -229,14 +238,16 @@ use serde::Serialize;
 #[derive(Serialize)]
 struct EventList(Vec<Event>);
 
-impl TryFrom<Page> for EventList {
+impl TryFrom<(&str, Page)> for EventList {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(page: Page) -> Result<Self, Self::Error> {
+    fn try_from(url_page: (&str, Page)) -> Result<Self, Self::Error> {
+        let (base_url, page) = url_page;
+
         let mut events: Vec<Event> = serde_json::from_str(page.as_ref())?;
 
         for event in &mut events {
-            event.url = [BASE_URL, &event.url].join("");
+            event.url = [base_url, &event.url].join("");
             event.description = parse_description(&event.description);
         }
 
