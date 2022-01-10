@@ -51,7 +51,7 @@ impl<'a> Web<'a> {
         self.login(&client, self.username, self.password).await?;
 
         let events_url = [self.base_url, EVENTS_PATH].join("");
-        info!("Fetching event list page {}", events_url);
+        info!(url=%events_url, "Fetching event list page");
         let events_page = Page::from_url(&client, &events_url).await?;
         let events = EventList::try_from((self.base_url, events_page))?;
 
@@ -82,7 +82,7 @@ impl<'a> Web<'a> {
     {
         let url = [self.base_url, LOGIN_PATH].join("");
 
-        info!("Logging into {}", url);
+        info!(%url, "Logging in");
 
         let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
         let rsp = client.post(url).form(&login_params).send().await?;
@@ -101,7 +101,7 @@ impl<'a> Web<'a> {
             .map(|event| {
                 let client = &client;
                 async move {
-                    info!("Fetching event from {}", event.url);
+                    info!(%event.id, %event, url=%event.url, "Fetching event");
                     let event_page = Page::from_url(&client, &event.url).await?;
                     let event = Event::try_from((event, event_page))?;
                     Ok::<Event, Box<dyn std::error::Error>>(event)

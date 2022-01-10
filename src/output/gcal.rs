@@ -82,11 +82,13 @@ impl<'a> GCal<'a> {
                 match result {
                     Err(_) => {
                         let rsp = hub.events().insert(cal_event, calendar_id).doit().await?;
-                        info!("Inserted event={:#?}", rsp.1);
+                        let link = rsp.1.html_link.as_ref().unwrap();
+                        info!(%event.id, %event, %link, "Inserted");
                         rsp
                     }
                     Ok(rsp) => {
-                        info!("Updated event={:#?}", rsp.1);
+                        let link = rsp.1.html_link.as_ref().unwrap();
+                        info!(%event.id, %event, %link, "Updated");
                         rsp
                     }
                 }

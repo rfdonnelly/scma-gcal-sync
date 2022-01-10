@@ -1,6 +1,8 @@
 use chrono::{NaiveDate, DateTime, Local};
 use serde::{Serialize, Deserialize};
 
+use std::fmt;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
     pub id: String,
@@ -20,6 +22,12 @@ pub struct Event {
     // Not present in SCMA JSON
     #[serde(default)]
     pub attendees: Option<Vec<Attendee>>,
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({}/{})", self.title, self.start_date, self.end_date)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
