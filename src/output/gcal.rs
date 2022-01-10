@@ -2,7 +2,6 @@ use crate::model::{
     Event,
 };
 
-use chrono::NaiveDate;
 use google_calendar3::{
     api::Event as CalEvent,
     api::EventDateTime,
@@ -18,7 +17,6 @@ pub struct GCal<'a> {
     calendar_name: &'a str,
     client_secret_json_path: &'a str,
     oauth_token_json_path: &'a str,
-    min_date: Option<NaiveDate>,
 }
 
 impl<'a> GCal<'a> {
@@ -26,13 +24,11 @@ impl<'a> GCal<'a> {
         calendar_name: &'a str,
         client_secret_json_path: &'a str,
         oauth_token_json_path: &'a str,
-        min_date: Option<NaiveDate>,
     ) -> Self {
         Self {
             calendar_name,
             client_secret_json_path,
             oauth_token_json_path,
-            min_date,
         }
     }
 
