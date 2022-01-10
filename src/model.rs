@@ -3,6 +3,7 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct Event {
+    pub id: String,
     pub title: String,
     pub url: String,
     pub start_date: NaiveDate,

@@ -15,12 +15,11 @@ use select::predicate::{
 use tap::prelude::*;
 use tracing::info;
 
-use std::collections::HashSet;
 use std::convert::TryFrom;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
-const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list";
+const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
@@ -42,10 +41,9 @@ impl<'a> Web<'a> {
 
         info!("Fetching event list page {}", EVENTS_URL);
         let events_page = Page::from_url(&client, EVENTS_URL).await?;
-        let event_urls = EventUrls::try_from(events_page)?;
-        info!("Parsed event URLs {:?}", event_urls);
+        let events = EventList::try_from(events_page)?;
 
-        let events = Self::fetch_events(&client, event_urls).await?;
+        let events = Self::fetch_events(&client, events).await?;
 
         Ok(events)
     }
@@ -77,15 +75,15 @@ impl<'a> Web<'a> {
         }
     }
 
-    async fn fetch_events(client: &reqwest::Client, event_urls: EventUrls) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
-        let events = stream::iter(event_urls)
-            .map(|event_url| {
+    async fn fetch_events(client: &reqwest::Client, event_items: EventList) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+        let events = stream::iter(event_items)
+            .map(|event_item| {
                 let client = &client;
                 async move {
+                    let event_url = [BASE_URL, &event_item.url].join("");
                     info!("Fetching event from {}", event_url);
                     let event_page = Page::from_url(&client, &event_url).await?;
-                    let event = Event::try_from(event_page)?;
-                    info!("Parsed {:?}", event);
+                    let event = Event::try_from((event_item, event_page))?;
                     Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
             })
@@ -116,92 +114,32 @@ impl Page {
     }
 }
 
-type Url = String;
-#[derive(Debug)]
-struct EventUrls(Vec<Url>);
-
-impl TryFrom<Page> for EventUrls {
+impl TryFrom<(EventListItem, Page)> for Event {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(page: Page) -> Result<Self, Self::Error> {
+    fn try_from(event_page_pair: (EventListItem, Page)) -> Result<Self, Self::Error> {
+        let (event_item, page) = event_page_pair;
+
         let document = Document::from(page.as_ref());
 
-        let node = document.find(Class("ohanah")).next().unwrap();
-        let urls = node
-            .find(Name("a"))
-            .fold(HashSet::new(), |mut urls, elem| {
-                let href = elem.attr("href").unwrap();
-                urls.insert(format!("{BASE_URL}{href}"));
-                urls
-            });
+        let id = event_item.id;
+        let title = event_item.title;
+        let url = event_item.url;
+        let start_date = event_item.start_date;
+        let end_date = event_item.end_date;
+        let location = event_item.location;
+        let description = event_item.description;
 
-        Ok(EventUrls(Vec::from_iter(urls)))
-    }
-}
-
-impl IntoIterator for EventUrls {
-    type Item = Url;
-    type IntoIter = std::vec::IntoIter<Url>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl TryFrom<Page> for Event {
-    type Error = Box<dyn std::error::Error>;
-
-    fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let document = Document::from(page.as_ref());
-
-        let title = document
-            .find(And(Name("meta"), Attr("property", "og:title")))
-            .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
-            .to_string();
-
-        let url = document
-            .find(Name("base"))
-            .next()
-            .unwrap()
-            .attr("href")
-            .unwrap()
-            .to_string();
-
-        let start_date = document
-            .find(And(Name("span"), Attr("itemprop", "startDate")))
-            .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
-            .parse()?;
-
-        let end_date = document
-            .find(And(Name("span"), Attr("itemprop", "endDate")))
-            .next()
-            .unwrap()
-            .attr("content")
-            .unwrap()
-            .parse()?;
-
-        let location = document
-            .find(And(Name("h3"), Attr("itemprop", "location")))
-            .next()
-            .unwrap()
-            .text()
-            .trim()
-            .to_string();
-
-        let description = document
-            .find(And(Name("div"), Attr("itemprop", "description")))
-            .next()
-            .unwrap()
-            .find(Name("div"))
-            .map(|div| div.text())
-            .collect::<Vec<String>>()
-            .join("\n");
+        // FIXME: Use simplified version of event_item.description based on document description
+        // parsing below.
+        // let description = document
+        //     .find(And(Name("div"), Attr("itemprop", "description")))
+        //     .next()
+        //     .unwrap()
+        //     .find(Name("div"))
+        //     .map(|div| div.text())
+        //     .collect::<Vec<String>>()
+        //     .join("\n");
 
         let comments = document
             .find(Class("kmt-wrap"))
@@ -270,6 +208,7 @@ impl TryFrom<Page> for Event {
             .collect();
 
         let event = Event {
+            id,
             title,
             url,
             start_date,
@@ -281,6 +220,43 @@ impl TryFrom<Page> for Event {
         };
 
         Ok(event)
+    }
+}
+
+use serde::{Serialize, Deserialize};
+use chrono::NaiveDate;
+#[derive(Serialize, Deserialize)]
+struct EventListItem {
+    id: String,
+    title: String,
+    url: String,
+    #[serde(rename(deserialize = "date"))]
+    start_date: NaiveDate,
+    end_date: NaiveDate,
+    #[serde(rename(deserialize = "venue"))]
+    location: String,
+    description: String,
+}
+
+#[derive(Serialize)]
+struct EventList(Vec<EventListItem>);
+
+impl TryFrom<Page> for EventList {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
+        let events: Vec<EventListItem> = serde_json::from_str(page.as_ref())?;
+
+        Ok(Self(events))
+    }
+}
+
+impl IntoIterator for EventList {
+    type Item = EventListItem;
+    type IntoIter = std::vec::IntoIter<EventListItem>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -298,16 +274,6 @@ mod test {
         }
     }
 
-    /// The order of the URLs may change from run to run since we use a HashSet to collect them
-    /// internally.  The order doesn't matter except when we want test it in a consistent manner.
-    /// This impl provides a sort method to simplify checking against a fixed expectation.
-    impl EventUrls {
-        fn sort(mut self) -> Self {
-            self.0.sort();
-            self
-        }
-    }
-
     fn path_to_input(filename: &str) -> PathBuf {
         [env!("CARGO_MANIFEST_DIR"), "test", "inputs", filename]
             .iter()
@@ -315,20 +281,27 @@ mod test {
     }
 
     #[test]
-    fn parse_event_list_page() {
-        let path = path_to_input("events-list.html");
-        let page = Page::from_file(path).unwrap();
-        let urls = EventUrls::try_from(page)
-            .unwrap()
-            .sort();
-        insta::assert_yaml_snapshot!(urls.0);
-    }
-
-    #[test]
     fn parse_event() {
         let path = path_to_input("event-0.html");
         let page = Page::from_file(path).unwrap();
-        let event = Event::try_from(page).unwrap();
+        let event_item = EventListItem {
+            id: "an id".into(),
+            title: "a title".into(),
+            url: "a url".into(),
+            start_date: "2022-01-14".parse().unwrap(),
+            end_date: "2022-01-17".parse().unwrap(),
+            location: "a location".into(),
+            description: "a description".into(),
+        };
+        let event = Event::try_from((event_item, page)).unwrap();
         insta::assert_yaml_snapshot!(event);
+    }
+
+    #[test]
+    fn parse_event_list_json() {
+        let path = path_to_input("events-list.json");
+        let page = Page::from_file(path).unwrap();
+        let events = EventList::try_from(page).unwrap();
+        insta::assert_yaml_snapshot!(events);
     }
 }

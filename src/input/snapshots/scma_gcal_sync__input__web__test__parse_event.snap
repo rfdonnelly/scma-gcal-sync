@@ -1,15 +1,16 @@
 ---
 source: src/input/web.rs
-assertion_line: 303
+assertion_line: 297
 expression: event
 
 ---
-title: "Joshua Tree [G]"
-url: "https://www.rockclimbing.org/index.php/event-list/events-list/joshua-tree-g-36"
+id: an id
+title: a title
+url: a url
 start_date: 2022-01-14
 end_date: 2022-01-17
-location: Joshua Tree NP Ryan Campground
-description: "Camping Fri, Sat, and Sun nights at Joshua Tree NP, Ryan Campground.\nFri, Sat, and Sun nights : Three campsites:\n\t#2 (2 parking spaces)\n\t#3 (2 parking spaces)\n\t#4 (2 parking spaces)\n\t\nTrip leader:LeRoy Russ"
+location: a location
+description: a description
 comments:
   - author: Ming Hsieh
     date: "2022-01-03T20:10:12-08:00"

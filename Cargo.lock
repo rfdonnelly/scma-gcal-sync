@@ -1133,6 +1133,7 @@ dependencies = [
  "reqwest",
  "select",
  "serde",
+ "serde_json",
  "serde_yaml",
  "tap",
  "tokio",
