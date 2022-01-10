@@ -120,26 +120,22 @@ impl TryFrom<(EventListItem, Page)> for Event {
     fn try_from(event_page_pair: (EventListItem, Page)) -> Result<Self, Self::Error> {
         let (event_item, page) = event_page_pair;
 
-        let document = Document::from(page.as_ref());
-
         let id = event_item.id;
         let title = event_item.title;
         let url = event_item.url;
         let start_date = event_item.start_date;
         let end_date = event_item.end_date;
         let location = event_item.location;
-        let description = event_item.description;
+        let description = Document::from(event_item.description.as_ref())
+            .find(Name("div"))
+            .next()
+            .unwrap()
+            .find(Name("div"))
+            .map(|div| div.text())
+            .collect::<Vec<String>>()
+            .join("\n");
 
-        // FIXME: Use simplified version of event_item.description based on document description
-        // parsing below.
-        // let description = document
-        //     .find(And(Name("div"), Attr("itemprop", "description")))
-        //     .next()
-        //     .unwrap()
-        //     .find(Name("div"))
-        //     .map(|div| div.text())
-        //     .collect::<Vec<String>>()
-        //     .join("\n");
+        let document = Document::from(page.as_ref());
 
         let comments = document
             .find(Class("kmt-wrap"))
@@ -291,7 +287,12 @@ mod test {
             start_date: "2022-01-14".parse().unwrap(),
             end_date: "2022-01-17".parse().unwrap(),
             location: "a location".into(),
-            description: "a description".into(),
+            // FIXME: Capture the first span
+            //
+            // The first span is ignored because we are only looking at the contents of the divs.
+            // Make description parsing more intelligent so that it includes the divless span AND
+            // separates the divs with newlines.
+            description: "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>".into(),
         };
         let event = Event::try_from((event_item, page)).unwrap();
         insta::assert_yaml_snapshot!(event);
