@@ -114,10 +114,10 @@ impl Page {
     }
 }
 
-impl TryFrom<(EventListItem, Page)> for Event {
+impl TryFrom<(Event, Page)> for Event {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(event_page_pair: (EventListItem, Page)) -> Result<Self, Self::Error> {
+    fn try_from(event_page_pair: (Event, Page)) -> Result<Self, Self::Error> {
         let (event_item, page) = event_page_pair;
 
         let id = event_item.id;
@@ -172,6 +172,7 @@ impl TryFrom<(EventListItem, Page)> for Event {
                 }
             })
             .collect();
+        let comments = Some(comments);
 
         let attendee_names = document
             .find(Class("attendee_name"))
@@ -202,6 +203,7 @@ impl TryFrom<(EventListItem, Page)> for Event {
                 }
             })
             .collect();
+        let attendees = Some(attendees);
 
         let event = Event {
             id,
@@ -219,37 +221,23 @@ impl TryFrom<(EventListItem, Page)> for Event {
     }
 }
 
-use serde::{Serialize, Deserialize};
-use chrono::NaiveDate;
-#[derive(Serialize, Deserialize)]
-struct EventListItem {
-    id: String,
-    title: String,
-    url: String,
-    #[serde(rename(deserialize = "date"))]
-    start_date: NaiveDate,
-    end_date: NaiveDate,
-    #[serde(rename(deserialize = "venue"))]
-    location: String,
-    description: String,
-}
-
+use serde::Serialize;
 #[derive(Serialize)]
-struct EventList(Vec<EventListItem>);
+struct EventList(Vec<Event>);
 
 impl TryFrom<Page> for EventList {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let events: Vec<EventListItem> = serde_json::from_str(page.as_ref())?;
+        let events: Vec<Event> = serde_json::from_str(page.as_ref())?;
 
         Ok(Self(events))
     }
 }
 
 impl IntoIterator for EventList {
-    type Item = EventListItem;
-    type IntoIter = std::vec::IntoIter<EventListItem>;
+    type Item = Event;
+    type IntoIter = std::vec::IntoIter<Event>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -280,7 +268,7 @@ mod test {
     fn parse_event() {
         let path = path_to_input("event-0.html");
         let page = Page::from_file(path).unwrap();
-        let event_item = EventListItem {
+        let event_item = Event {
             id: "an id".into(),
             title: "a title".into(),
             url: "a url".into(),
@@ -293,6 +281,8 @@ mod test {
             // Make description parsing more intelligent so that it includes the divless span AND
             // separates the divs with newlines.
             description: "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>".into(),
+            comments: None,
+            attendees: None,
         };
         let event = Event::try_from((event_item, page)).unwrap();
         insta::assert_yaml_snapshot!(event);
