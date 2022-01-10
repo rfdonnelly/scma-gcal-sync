@@ -73,39 +73,12 @@ impl<'a> GCal<'a> {
             .await?;
         let cal_events = cal_events.items.unwrap();
 
-        // for event in cal_events {
-        //     let event_id = event.id.unwrap();
-        //     let event_summary = event.summary.unwrap();
-        //     info!(%event_summary, "Deleting event");
-        //     hub.events().delete(calendar_id, &event_id).doit().await?;
-        // }
-
         for event in events {
-            let id: u32 = event.id.parse()?;
-            let id = format!("scma1{:05}", id);
-            let event_id = &id.clone();
-            let summary = format!("SCMA: {}", event.title);
-            let start = EventDateTime {
-                date: Some(event.start_date.to_string()),
-                ..Default::default()
-            };
-            let end = EventDateTime {
-                date: Some(event.end_date.to_string()),
-                ..Default::default()
-            };
-
-            let cal_event = CalEvent {
-                id: Some(id),
-                summary: Some(summary),
-                start: Some(start),
-                end: Some(end),
-                description: Some(event.description.clone()),
-                location: Some(event.location.clone()),
-                ..Default::default()
-            };
+            let cal_event = CalEvent::try_from(event)?;
 
             let rsp = {
-                let result = hub.events().patch(cal_event.clone(), calendar_id, event_id).doit().await;
+                let event_id = cal_event.id.as_ref().unwrap().clone();
+                let result = hub.events().patch(cal_event.clone(), calendar_id, &event_id).doit().await;
                 match result {
                     Err(_) => {
                         let rsp = hub.events().insert(cal_event, calendar_id).doit().await?;
@@ -121,5 +94,55 @@ impl<'a> GCal<'a> {
         }
 
         Ok(())
+    }
+}
+
+impl TryFrom<&Event> for CalEvent {
+    type Error = Box<dyn ::std::error::Error>;
+
+    fn try_from(event: &Event) -> Result<Self, Self::Error> {
+        let id = event_id(&event)?;
+        let event_id = &id.clone();
+        let summary = event_summary(&event);
+        let start = event_start(&event);
+        let end = event_end(&event);
+        let description = event.description.clone();
+        let location = event.location.clone();
+
+        let cal_event = CalEvent {
+            id: Some(id),
+            summary: Some(summary),
+            start: Some(start),
+            end: Some(end),
+            description: Some(description),
+            location: Some(location),
+            ..Default::default()
+        };
+
+        Ok(cal_event)
+    }
+}
+
+fn event_id(event: &Event) -> Result<String, std::num::ParseIntError> {
+    let id: u32 = event.id.parse()?;
+    let id = format!("{:05}", id);
+    Ok(id)
+}
+
+fn event_summary(event: &Event) -> String {
+    format!("SCMA: {}", event.title)
+}
+
+fn event_start(event: &Event) -> EventDateTime {
+    EventDateTime {
+        date: Some(event.start_date.to_string()),
+        ..Default::default()
+    }
+}
+
+fn event_end(event: &Event) -> EventDateTime {
+    EventDateTime {
+        date: Some(event.end_date.to_string()),
+        ..Default::default()
     }
 }
