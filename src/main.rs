@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &args.username,
                 &args.password,
                 BASE_URL,
-                min_date
+                min_date,
             ).read().await?
         }
         InputType::YAML => {
@@ -128,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &args.calendar,
                 &args.client_secret_json_path,
                 &args.oauth_token_json_path,
+                min_date,
             ).write(&events).await?;
         }
         OutputType::YAML => {
