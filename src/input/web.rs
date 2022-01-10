@@ -77,15 +77,14 @@ impl<'a> Web<'a> {
         }
     }
 
-    async fn fetch_events(client: &reqwest::Client, event_items: EventList) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
-        let events = stream::iter(event_items)
-            .map(|event_item| {
+    async fn fetch_events(client: &reqwest::Client, events: EventList) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+        let events = stream::iter(events)
+            .map(|event| {
                 let client = &client;
                 async move {
-                    let event_url = [BASE_URL, &event_item.url].join("");
-                    info!("Fetching event from {}", event_url);
-                    let event_page = Page::from_url(&client, &event_url).await?;
-                    let event = Event::try_from((event_item, event_page))?;
+                    info!("Fetching event from {}", event.url);
+                    let event_page = Page::from_url(&client, &event.url).await?;
+                    let event = Event::try_from((event, event_page))?;
                     Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
             })
@@ -128,7 +127,7 @@ impl TryFrom<(Event, Page)> for Event {
         let start_date = event_item.start_date;
         let end_date = event_item.end_date;
         let location = event_item.location;
-        let description = parse_description(&event_item.description);
+        let description = event_item.description;
 
         let document = Document::from(page.as_ref());
 
@@ -224,7 +223,12 @@ impl TryFrom<Page> for EventList {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let events: Vec<Event> = serde_json::from_str(page.as_ref())?;
+        let mut events: Vec<Event> = serde_json::from_str(page.as_ref())?;
+
+        for event in &mut events {
+            event.url = [BASE_URL, &event.url].join("");
+            event.description = parse_description(&event.description);
+        }
 
         Ok(Self(events))
     }
