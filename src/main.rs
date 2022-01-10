@@ -7,6 +7,7 @@ use output::GCal;
 
 use chrono::Local;
 use clap::{
+    AppSettings,
     ArgEnum,
     Parser,
 };
@@ -48,20 +49,22 @@ impl From<&str> for PipeFile {
 
 #[derive(Parser)]
 #[clap(about, version, author)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct Args {
-    #[clap(arg_enum, short, long, default_value="web")]
-    input: InputType,
-    #[clap(arg_enum, short, long, default_value="gcal")]
-    output: OutputType,
-
-    /// Includes past events. Sync is limited to present (active) and future events by default.
-    /// This option will sync all events (past, present, and future).
+    /// Include past events. Without this option, only present (active) and future events will be
+    /// sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
+    /// applicable to the web input.
     #[clap(long)]
     all: bool,
 
+    #[clap(arg_enum, short, long, default_value="web")]
+    input: InputType,
     /// The name of the input file to use for the yaml input.
     #[clap(parse(from_str), long="ifile", default_value="-")]
     input_file: PipeFile,
+
+    #[clap(arg_enum, short, long, default_value="gcal")]
+    output: OutputType,
     /// The name of the output file to use for the yaml output.
     #[clap(parse(from_str), long="ofile", default_value="-")]
     output_file: PipeFile,
