@@ -44,8 +44,6 @@ impl<'a> GCal<'a> {
             .build()
             .await?;
 
-        let scopes = ["https://www.googleapis.com/auth/calendar"];
-
         let client = hyper::Client::builder()
             .build(hyper_rustls::HttpsConnector::with_native_roots());
 
@@ -57,7 +55,6 @@ impl<'a> GCal<'a> {
             .doit()
             .await?;
 
-        let calendar_name = &self.calendar_name;
         let calendars = list.items.unwrap();
         let calender_entry = calendars
             .iter()
@@ -66,17 +63,10 @@ impl<'a> GCal<'a> {
 
         let calendar_id = calender_entry.id.as_ref().unwrap();
 
-        let (_, cal_events) = hub
-            .events()
-            .list(calendar_id)
-            .doit()
-            .await?;
-        let cal_events = cal_events.items.unwrap();
-
         for event in events {
             let cal_event = CalEvent::try_from(event)?;
 
-            let rsp = {
+            let _rsp = {
                 let event_id = cal_event.id.as_ref().unwrap().clone();
                 let result = hub.events().patch(cal_event.clone(), calendar_id, &event_id).doit().await;
                 match result {
@@ -104,7 +94,6 @@ impl TryFrom<&Event> for CalEvent {
 
     fn try_from(event: &Event) -> Result<Self, Self::Error> {
         let id = event_id(&event)?;
-        let event_id = &id.clone();
         let summary = event_summary(&event);
         let start = event_start(&event);
         let end = event_end(&event);
