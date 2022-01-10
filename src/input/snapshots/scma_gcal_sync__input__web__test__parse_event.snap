@@ -1,6 +1,6 @@
 ---
 source: src/input/web.rs
-assertion_line: 298
+assertion_line: 321
 expression: event
 
 ---
@@ -10,7 +10,7 @@ url: a url
 start_date: 2022-01-14
 end_date: 2022-01-17
 location: a location
-description: "Fri and Sat nights : Four campsites:\n\t#3 (2 parking spaces)\n\t#4 (2 parking spaces)\n\t#6 (2 parking spaces)\n\t#7 (2 parking spaces)\nTrip Leader: Rob Donnelly"
+description: "Camping Fri and Sat nights at Joshua Tree, Ryan Campground.\nFri and Sat nights : Four campsites:\n\t#3 (2 parking spaces)\n\t#4 (2 parking spaces)\n\t#6 (2 parking spaces)\n\t#7 (2 parking spaces)\nTrip Leader: Rob Donnelly\n"
 comments:
   - author: Ming Hsieh
     date: "2022-01-03T20:10:12-08:00"
