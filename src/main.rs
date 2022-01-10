@@ -52,10 +52,10 @@ struct Args {
     output: OutputType,
 
     /// The name of the input file to use for the yaml input.
-    #[clap(parse(from_str), long, default_value="-")]
+    #[clap(parse(from_str), long="ifile", default_value="-")]
     input_file: PipeFile,
     /// The name of the output file to use for the yaml output.
-    #[clap(parse(from_str), long, default_value="-")]
+    #[clap(parse(from_str), long="ofile", default_value="-")]
     output_file: PipeFile,
 
     /// Username for the SCMA website (https://rockclimbing.org).
@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?
         }
         InputType::YAML => {
-            info!(?args.input_file, "Loading events from file");
+            info!(?args.input_file, "Loading events from");
             let events_yaml = match args.input_file {
                 PipeFile::Pipe => todo!(),
                 PipeFile::File(path) => std::fs::read_to_string(&path)?,
