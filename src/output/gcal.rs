@@ -50,19 +50,21 @@ impl<'a> GCal<'a> {
 
         let hub = CalendarHub::new(client, auth);
 
+        info!("Listing calendars");
         let (_, list) = hub
             .calendar_list()
             .list()
             .doit()
             .await?;
-
         let calendars = list.items.unwrap();
+
+        info!(calendar_name=%self.calendar_name, "Finding calendar");
         let calender_entry = calendars
             .iter()
             .find(|entry| entry.summary.as_ref().unwrap() == self.calendar_name)
             .unwrap();
-
         let calendar_id = calender_entry.id.as_ref().unwrap();
+        info!(%calendar_id, "Found calendar");
 
         for event in events {
             let cal_event = CalEvent::try_from(event)?;
