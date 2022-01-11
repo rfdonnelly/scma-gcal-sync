@@ -13,11 +13,15 @@ use yup_oauth2::{
     InstalledFlowReturnMethod,
 };
 
+use std::fmt::Write;
+
 pub struct GCal<'a> {
     calendar_name: &'a str,
     client_secret_json_path: &'a str,
     oauth_token_json_path: &'a str,
 }
+
+const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 
 impl<'a> GCal<'a> {
     pub fn new(
@@ -94,7 +98,7 @@ impl TryFrom<&Event> for CalEvent {
         let summary = event_summary(&event);
         let start = event_start(&event);
         let end = event_end(&event);
-        let description = event.description.clone();
+        let description = event_description(&event)?;
         let location = event.location.clone();
 
         let cal_event = CalEvent {
@@ -133,4 +137,35 @@ fn event_end(event: &Event) -> EventDateTime {
         date: Some(event.end_date.to_string()),
         ..Default::default()
     }
+}
+
+fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Error>> {
+    let mut buffer = String::with_capacity(DESCRIPTION_BUFFER_SIZE);
+    buffer.push_str(&event.description);
+    buffer.push_str("\n");
+    buffer.push_str("URL: ");
+    buffer.push_str(&event.url);
+    buffer.push_str("\n\n");
+
+    if let Some(attendees) = event.attendees.as_ref() {
+        buffer.push_str("ATTENDEES:\n");
+        buffer.push_str("<ul>");
+        for attendee in attendees {
+            write!(buffer, "<li>{} ({}) {}</li>", attendee.name, attendee.count, attendee.comment)?;
+        }
+        buffer.push_str("</ul>");
+        buffer.push_str("\n\n");
+    }
+
+    if let Some(comments) = event.comments.as_ref() {
+        buffer.push_str("COMMENTS:\n");
+        buffer.push_str("<ul>");
+        for comment in comments {
+            write!(buffer, "<li>{} ({}) {}</li>", comment.author, comment.date, comment.text)?;
+        }
+        buffer.push_str("</ul>");
+        buffer.push_str("\n\n");
+    }
+
+    Ok(buffer)
 }
