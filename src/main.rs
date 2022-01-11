@@ -115,7 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ).read().await?
         }
         InputType::YAML => {
-            info!(?args.input_file, "Loading events from");
+            info!(input=?args.input_file, "Reading events");
             let events_yaml = match args.input_file {
                 PipeFile::Pipe => todo!(),
                 PipeFile::File(path) => std::fs::read_to_string(&path)?,
@@ -126,7 +126,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.output {
         OutputType::GCal => {
-            info!("Querying Google Calendar");
             GCal::new(
                 &args.calendar,
                 &args.client_secret_json_path,
@@ -134,6 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ).write(&events).await?;
         }
         OutputType::YAML => {
+            info!(output=?args.output_file, "Writing events");
             match args.output_file {
                 PipeFile::Pipe => println!("{}", serde_yaml::to_string(&events)?),
                 PipeFile::File(_) => todo!(),

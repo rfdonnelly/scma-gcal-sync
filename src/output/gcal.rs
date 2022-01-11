@@ -35,6 +35,7 @@ impl<'a> GCal<'a> {
     pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
         let secret = yup_oauth2::read_application_secret(self.client_secret_json_path).await?;
 
+        info!("Authenticating");
         let auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
             .persist_tokens_to_disk(self.oauth_token_json_path)
             .build()
