@@ -45,6 +45,3 @@ TBD
 Only all-day events are supported.
 SCMA events that are not all-day events are converted to all-day events.
 Effectively, the time information is stripped.
-
-Pagination is not supported.
-SCMA events that are not on the first page of the events list are ignored.
