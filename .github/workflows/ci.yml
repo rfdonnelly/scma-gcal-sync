@@ -23,7 +23,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --color=always
+          args: --color always
 
   test:
     name: Test Suite
@@ -43,7 +43,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --color=always -- --color=always
+          args: --color always -- --color always
 
   lints:
     name: Lints
@@ -64,10 +64,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check --color=always
+          args: --all -- --check --color always
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --color=always -- -D warnings
+          args: --color always -- -D warnings
