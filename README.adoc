@@ -30,15 +30,15 @@ RUST_LOG=info scma-gcal-sync
 
 Fetches events from the SCMA website and converts them to YAML.
 
- scma-gcal-sync -u <scma-username> -p <scma-password> > events.yml
+ scma-gcal-sync -u <scma-username> -p <scma-password> -o yaml > events.yml
 
 === YAML to GCal
 
-TBD
+ scma-gcal-sync -i yaml --ifile events.yml
 
 === Web to GCAL
 
-TBD
+ scma-gcal-sync -u <scma-username> -p <scma-password>
 
 == Limitations
 
