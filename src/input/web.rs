@@ -356,7 +356,8 @@ mod test {
     fn parse_event_list_json() {
         let path = path_to_input("events-list.json");
         let page = Page::from_file(path).unwrap();
-        let events = EventList::try_from(page).unwrap();
+        let base_url = "https://www.rockclimbing.org";
+        let events = EventList::try_from((base_url, page)).unwrap();
         insta::assert_yaml_snapshot!(events);
     }
 
