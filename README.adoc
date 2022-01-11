@@ -19,11 +19,11 @@ Stored as a JSON file.
 Path to JSON file specified via the `GCAL_CLIENT_SECRET_PATH` environment variable or the `--client-secret-json-path` option.
 Default path is `client_secret.json`.
 +
-.Create a project
-.Add Google Calendar API
-.Create OAuth Client ID credentials
-.Download OAuth Client ID JSON
-.Configure OAuth consent screen
+. Create a project
+. Add Google Calendar API
+. Create OAuth Client ID credentials
+. Download OAuth Client ID JSON
+. Configure OAuth consent screen
 .. Add `https://wwww.googleapis.com/auth/calendar` scope
 .. Add email to test users
 
