@@ -1,5 +1,5 @@
-use chrono::{NaiveDate, DateTime, Local};
-use serde::{Serialize, Deserialize};
+use chrono::{NaiveDate, DateTime, Local, FixedOffset};
+use serde::{Serialize, Deserialize, Serializer};
 
 use std::fmt;
 
@@ -33,8 +33,18 @@ impl fmt::Display for Event {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Comment {
     pub author: String,
+    #[serde(serialize_with = "serialize_datetime_pacific")]
     pub date: DateTime<Local>,
     pub text: String,
+}
+
+fn serialize_datetime_pacific<S>(dt: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer
+{
+    let pacific = FixedOffset::west(8 * 60 * 60);
+    let s = dt.with_timezone(&pacific).to_rfc3339();
+    serializer.serialize_str(&s)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
