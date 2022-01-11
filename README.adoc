@@ -17,6 +17,7 @@ Google Calendar client secret::
 Obtain OAuth client ID credentials via the link:https://console.developers.google.com[Google Developer Console].
 Stored as a JSON file.
 Path to JSON file specified via the `GCAL_CLIENT_SECRET_PATH` environment variable or the `--client-secret-json-path` option.
+Default path is `client_secret.json`.
 +
 .Create a project
 .Add Google Calendar API
@@ -27,10 +28,11 @@ Path to JSON file specified via the `GCAL_CLIENT_SECRET_PATH` environment variab
 .. Add email to test users
 
 Google Calendar OAuth token::
-Stored as a JSON file.
-Path to JSON file specified via the `GCAL_OAUTH_TOKEN_JSON_PATH` environment variable or the `--oauth-token-json-path` option.
 Obtain on first run of `scma-gcal-sync` with gcal output.
 Follow on screen instructions.
+Stored as a JSON file.
+Path to JSON file specified via the `GCAL_OAUTH_TOKEN_JSON_PATH` environment variable or the `--oauth-token-json-path` option.
+Default path is `token.json`.
 
 == Examples
 
