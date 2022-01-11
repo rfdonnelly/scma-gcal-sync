@@ -64,7 +64,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
+          args: --all -- --check --color=always
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
