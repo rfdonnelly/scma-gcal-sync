@@ -16,17 +16,6 @@ Specified via the `SCMA_PASSWORD` environment variable or the `-p|--password` op
 Google Calendar::
 TBD
 
-== Logging
-
-Logging is available via the `RUST_LOG` environment variable.
-Use `RUST_LOG=info`.
-
-[source,sh]
-.Logging Example
-----
-RUST_LOG=info scma-gcal-sync
-----
-
 == Examples
 
 === Web to YAML
