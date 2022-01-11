@@ -1,5 +1,8 @@
 = SCMA Google Calendar Sync
 
+[link=https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/ci.yml]
+image::https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/ci.yml/badge.svg[CI]
+
 Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Association (SCMA)] calendar events to Google Calendar.
 
 == Credentials
