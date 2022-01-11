@@ -16,6 +16,8 @@ jobs:
           repository: rfdonnelly/scma-gcal-sync
           latest: true
           fileName: scma-gcal-sync
+      - name: Set execute permissions
+        run: chmod +x scma-gcal-sync
       - name: Populate credentials
         run: |
           echo "$GCAL_CLIENT_SECRET_JSON" > client_secret.json
