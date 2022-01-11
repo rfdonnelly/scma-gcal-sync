@@ -141,30 +141,23 @@ fn event_end(event: &Event) -> EventDateTime {
 
 fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Error>> {
     let mut buffer = String::with_capacity(DESCRIPTION_BUFFER_SIZE);
-    buffer.push_str(&event.description);
-    buffer.push_str("\n");
-    buffer.push_str("URL: ");
-    buffer.push_str(&event.url);
-    buffer.push_str("\n\n");
+    write!(buffer, "{}\n\n", event.url)?;
+    write!(buffer, "{}", event.description)?;
 
     if let Some(attendees) = event.attendees.as_ref() {
-        buffer.push_str("ATTENDEES:\n");
-        buffer.push_str("<ul>");
+        write!(buffer, "<h3>Attendees</h3><ul>")?;
         for attendee in attendees {
             write!(buffer, "<li>{} ({}) {}</li>", attendee.name, attendee.count, attendee.comment)?;
         }
-        buffer.push_str("</ul>");
-        buffer.push_str("\n\n");
+        write!(buffer, "</ul>")?;
     }
 
     if let Some(comments) = event.comments.as_ref() {
-        buffer.push_str("COMMENTS:\n");
-        buffer.push_str("<ul>");
+        write!(buffer, "<h3>Comments</h3><ul>")?;
         for comment in comments {
             write!(buffer, "<li>{} ({}) {}</li>", comment.author, comment.date, comment.text)?;
         }
-        buffer.push_str("</ul>");
-        buffer.push_str("\n\n");
+        write!(buffer, "</ul>")?;
     }
 
     Ok(buffer)
