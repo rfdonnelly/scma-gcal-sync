@@ -1,17 +1,20 @@
 ---
 source: src/input/web.rs
-assertion_line: 325
+assertion_line: 352
 expression: event
 
 ---
-id: an id
+id: "527"
 title: a title
 url: a url
 start_date: 2022-01-14
 end_date: 2022-01-17
 location: a location
-description: "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>"
+description: a description
 comments:
+  - author: LeRoy Russ
+    date: "2022-01-07T12:28:38-08:00"
+    text: "Please try to carpool, thanks"
   - author: Ming Hsieh
     date: "2022-01-03T20:10:12-08:00"
     text: "Just to confirm - we have site 2, 3, 4 for Friday, Saturday, and Sunday. Please ignore the typo above. Thanks!"
@@ -20,7 +23,7 @@ comments:
     text: "Ming, how many people/cars total do the 3 campsites accommodate?"
   - author: Rob Donnelly
     date: "2022-01-04T15:05:44-08:00"
-    text: "Officially 5 cars total but there is enough room for 6.  There is also a bathroom between sites 4 and 5 that can accommodate two cars.  There is no sign that says you can't overnight park there.  There is also room for 3 cars at the campground entrance.  Again no sign that says you can't park overnight there.  Beyond that, there is always the option of asking neighbors if they'd be nice enough to let you use their extra spot.\n\nEach site accommodates 6 ppl officially.\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\n\t\tComment last edited on 1 day ago by Rob Donnelly\n\t\n\t\t\n\t\tRob Donnelly"
+    text: "Officially 5 cars total but there is enough room for 6.  There is also a bathroom between sites 4 and 5 that can accommodate two cars.  There is no sign that says you can't overnight park there.  There is also room for 3 cars at the campground entrance.  Again no sign that says you can't park overnight there.  Beyond that, there is always the option of asking neighbors if they'd be nice enough to let you use their extra spot.\n\nEach site accommodates 6 ppl officially.\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\n\t\tComment last edited on about 6 days ago by Rob Donnelly\n\t\n\t\t\n\t\tRob Donnelly"
 attendees:
   - name: Alison Annunziata
     count: 1
@@ -55,4 +58,10 @@ attendees:
   - name: Jesica Doane
     count: 1
     comment: Possibly camping Saturday night
+  - name: Alfonso (Fonso) Parra
+    count: 1
+    comment: "Saturday night only, if space is available. Thanks"
+  - name: Alexander (AJ) Mody
+    count: 2
+    comment: Planning to stay Friday Night only.
 

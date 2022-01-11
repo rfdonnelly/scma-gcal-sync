@@ -335,16 +335,16 @@ mod test {
 
     #[test]
     fn parse_event() {
-        let path = path_to_input("event-0.html");
+        let path = path_to_input("event-527.html");
         let page = Page::from_file(path).unwrap();
         let event_item = Event {
-            id: "an id".into(),
+            id: "527".into(),
             title: "a title".into(),
             url: "a url".into(),
             start_date: "2022-01-14".parse().unwrap(),
             end_date: "2022-01-17".parse().unwrap(),
             location: "a location".into(),
-            description: "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>".into(),
+            description: "a description".into(),
             comments: None,
             attendees: None,
         };
