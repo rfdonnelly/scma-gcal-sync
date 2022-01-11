@@ -13,8 +13,24 @@ Specified via the `SCMA_USERNAME` environment variable or the `-u|--username` op
 SCMA website password::
 Specified via the `SCMA_PASSWORD` environment variable or the `-p|--password` option.
 
-Google Calendar::
-TBD
+Google Calendar client secret::
+Obtain OAuth client ID credentials via the link:https://console.developers.google.com[Google Developer Console].
+Stored as a JSON file.
+Path to JSON file specified via the `GCAL_CLIENT_SECRET_PATH` environment variable or the `--client-secret-json-path` option.
++
+.Create a project
+.Add Google Calendar API
+.Create OAuth Client ID credentials
+.Download OAuth Client ID JSON
+.Configure OAuth consent screen
+.. Add `https://wwww.googleapis.com/auth/calendar` scope
+.. Add email to test users
+
+Google Calendar OAuth token::
+Stored as a JSON file.
+Path to JSON file specified via the `GCAL_OAUTH_TOKEN_JSON_PATH` environment variable or the `--oauth-token-json-path` option.
+Obtain on first run of `scma-gcal-sync` with gcal output.
+Follow on screen instructions.
 
 == Examples
 
