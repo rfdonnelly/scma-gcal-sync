@@ -55,3 +55,16 @@ Fetches events from the SCMA website and converts them to YAML.
 Only all-day events are supported.
 SCMA events that are not all-day events are converted to all-day events.
 Effectively, the time information is stripped.
+
+== License
+
+Licensed under either of
+
+* Apache License, Version 2.0 (link:LICENSE-APACHE[LICENSE-APACHE] or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license (link:LICENSE-MIT[LICENSE-MIT] or http://opensource.org/licenses/MIT)
+
+at your option.
+
+== Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
