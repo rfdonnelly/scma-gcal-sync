@@ -99,21 +99,23 @@ impl<'a> Web<'a> {
         events: EventList,
     ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events = stream::iter(events)
-            .map(|event| {
-                let client = &client;
-                async move {
-                    info!(%event.id, %event, url=%event.url, "Fetching event");
-                    let event_page = Page::from_url(client, &event.url).await?;
-                    let event = Event::try_from((event, event_page))?;
-                    Ok::<Event, Box<dyn std::error::Error>>(event)
-                }
-            })
+            .map(|event| Self::fetch_event(client, event))
             .buffer_unordered(CONCURRENT_REQUESTS)
             .try_collect::<Vec<_>>()
             .await?
             .tap_mut(|events| events.sort_by_key(|event| event.start_date));
 
         Ok(events)
+    }
+
+    async fn fetch_event(
+        client: &reqwest::Client,
+        event: Event
+    ) -> Result<Event, Box<dyn std::error::Error>> {
+        info!(%event.id, %event, url=%event.url, "Fetching event");
+        let event_page = Page::from_url(client, &event.url).await?;
+        let event = Event::try_from((event, event_page))?;
+        Ok(event)
     }
 }
 
