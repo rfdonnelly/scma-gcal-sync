@@ -110,7 +110,7 @@ impl<'a> Web<'a> {
 
     async fn fetch_event(
         client: &reqwest::Client,
-        event: Event
+        event: Event,
     ) -> Result<Event, Box<dyn std::error::Error>> {
         info!(%event.id, %event, url=%event.url, "Fetching event");
         let event_page = Page::from_url(client, &event.url).await?;
