@@ -6,22 +6,34 @@ use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 use std::fmt::Write;
 
-pub struct GCal<'a> {
-    calendar_name: &'a str,
+pub struct GCal {
+    calendar_id: String,
     hub: CalendarHub,
 }
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 
-impl<'a> GCal<'a> {
+impl GCal {
     pub async fn new(
-        calendar_name: &'a str,
+        calendar_name: &str,
         client_secret_json_path: &str,
         oauth_token_json_path: &str,
-    ) -> Result<GCal<'a>, Box<dyn std::error::Error>> {
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
 
-        let gcal = Self { calendar_name, hub };
+        info!("Listing calendars");
+        let (_, list) = hub.calendar_list().list().doit().await?;
+        let calendars = list.items.unwrap();
+
+        info!(%calendar_name, "Finding calendar");
+        let calender_entry = calendars
+            .iter()
+            .find(|entry| entry.summary.as_ref().unwrap() == calendar_name)
+            .unwrap();
+        let calendar_id = calender_entry.id.as_ref().unwrap().clone();
+        info!(%calendar_id, "Found calendar");
+
+        let gcal = Self { calendar_id, hub };
 
         Ok(gcal)
     }
@@ -48,49 +60,46 @@ impl<'a> GCal<'a> {
     }
 
     pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Listing calendars");
-        let (_, list) = self.hub.calendar_list().list().doit().await?;
-        let calendars = list.items.unwrap();
-
-        info!(calendar_name=%self.calendar_name, "Finding calendar");
-        let calender_entry = calendars
-            .iter()
-            .find(|entry| entry.summary.as_ref().unwrap() == self.calendar_name)
-            .unwrap();
-        let calendar_id = calender_entry.id.as_ref().unwrap();
-        info!(%calendar_id, "Found calendar");
-
         for event in events {
-            let cal_event = CalEvent::try_from(event)?;
-
-            let _rsp = {
-                let event_id = cal_event.id.as_ref().unwrap().clone();
-                let result = self
-                    .hub
-                    .events()
-                    .patch(cal_event.clone(), calendar_id, &event_id)
-                    .doit()
-                    .await;
-                match result {
-                    Err(_) => {
-                        let rsp = self
-                            .hub
-                            .events()
-                            .insert(cal_event, calendar_id)
-                            .doit()
-                            .await?;
-                        let link = rsp.1.html_link.as_ref().unwrap();
-                        info!(%event.id, %event, %link, "Inserted");
-                        rsp
-                    }
-                    Ok(rsp) => {
-                        let link = rsp.1.html_link.as_ref().unwrap();
-                        info!(%event.id, %event, %link, "Updated");
-                        rsp
-                    }
-                }
-            };
+            self.patch_or_insert_event(event).await?;
         }
+
+        Ok(())
+    }
+
+    async fn patch_or_insert_event(
+        &self,
+        event: &Event,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let cal_event = CalEvent::try_from(event)?;
+
+        let _rsp = {
+            let event_id = cal_event.id.as_ref().unwrap().clone();
+            let result = self
+                .hub
+                .events()
+                .patch(cal_event.clone(), &self.calendar_id, &event_id)
+                .doit()
+                .await;
+            match result {
+                Err(_) => {
+                    let rsp = self
+                        .hub
+                        .events()
+                        .insert(cal_event, &self.calendar_id)
+                        .doit()
+                        .await?;
+                    let link = rsp.1.html_link.as_ref().unwrap();
+                    info!(%event.id, %event, %link, "Inserted");
+                    rsp
+                }
+                Ok(rsp) => {
+                    let link = rsp.1.html_link.as_ref().unwrap();
+                    info!(%event.id, %event, %link, "Updated");
+                    rsp
+                }
+            }
+        };
 
         Ok(())
     }
