@@ -16,34 +16,41 @@ const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
-    username: &'a str,
-    password: &'a str,
     base_url: &'a str,
     min_date: Option<NaiveDate>,
+    client: reqwest::Client,
 }
 
 impl<'a> Web<'a> {
-    pub fn new(
-        username: &'a str,
-        password: &'a str,
+    pub async fn new(
+        username: &str,
+        password: &str,
         base_url: &'a str,
         min_date: Option<NaiveDate>,
-    ) -> Self {
-        Self {
-            username,
-            password,
+    ) -> Result<Web<'a>, Box<dyn std::error::Error>> {
+        let client = Self::create_client()?;
+
+        let web = Self {
             base_url,
             min_date,
-        }
+            client,
+        };
+
+        web.login(username, password).await?;
+
+        Ok(web)
     }
 
     pub async fn read(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
-        let client = Self::create_client()?;
-        self.login(&client, self.username, self.password).await?;
+        let events = self.fetch_events().await?;
+        let events = self.fetch_events_details(events).await?;
+        Ok(events)
+    }
 
+    async fn fetch_events(&self) -> Result<EventList, Box<dyn std::error::Error>> {
         let events_url = [self.base_url, EVENTS_PATH].join("");
         info!(url=%events_url, "Fetching event list page");
-        let events_page = Page::from_url(&client, &events_url).await?;
+        let events_page = Page::from_url(&self.client, &events_url).await?;
         let events = EventList::try_from((self.base_url, events_page))?;
 
         let events = match self.min_date {
@@ -53,8 +60,6 @@ impl<'a> Web<'a> {
                 .filter(|event| event.end_date > min_date)
                 .collect(),
         };
-
-        let events = Self::fetch_events(&client, events).await?;
 
         Ok(events)
     }
@@ -66,24 +71,17 @@ impl<'a> Web<'a> {
             .build()?)
     }
 
-    async fn login<S>(
+    async fn login(
         &self,
-        client: &reqwest::Client,
-        username: S,
-        password: S,
-    ) -> Result<(), Box<dyn std::error::Error>>
-    where
-        S: AsRef<str>,
-    {
+        username: &str,
+        password: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let url = [self.base_url, LOGIN_PATH].join("");
 
         info!(%url, "Logging in");
 
-        let login_params = [
-            ("username", username.as_ref()),
-            ("passwd", password.as_ref()),
-        ];
-        let rsp = client.post(url).form(&login_params).send().await?;
+        let login_params = [("username", username), ("passwd", password)];
+        let rsp = self.client.post(url).form(&login_params).send().await?;
 
         if !rsp.status().is_success() {
             Err("login failed".into())
@@ -94,12 +92,12 @@ impl<'a> Web<'a> {
         }
     }
 
-    async fn fetch_events(
-        client: &reqwest::Client,
+    async fn fetch_events_details(
+        &self,
         events: EventList,
     ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events = stream::iter(events)
-            .map(|event| Self::fetch_event(client, event))
+            .map(|event| self.fetch_event_details(event))
             .buffer_unordered(CONCURRENT_REQUESTS)
             .try_collect::<Vec<_>>()
             .await?
@@ -108,12 +106,9 @@ impl<'a> Web<'a> {
         Ok(events)
     }
 
-    async fn fetch_event(
-        client: &reqwest::Client,
-        event: Event,
-    ) -> Result<Event, Box<dyn std::error::Error>> {
+    async fn fetch_event_details(&self, event: Event) -> Result<Event, Box<dyn std::error::Error>> {
         info!(%event.id, %event, url=%event.url, "Fetching event");
-        let event_page = Page::from_url(client, &event.url).await?;
+        let event_page = Page::from_url(&self.client, &event.url).await?;
         let event = Event::try_from((event, event_page))?;
         Ok(event)
     }

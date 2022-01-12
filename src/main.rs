@@ -107,6 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let events = match args.input {
         InputType::Web => {
             Web::new(&args.username, &args.password, BASE_URL, min_date)
+                .await?
                 .read()
                 .await?
         }
