@@ -88,11 +88,11 @@ impl TryFrom<&Event> for CalEvent {
     type Error = Box<dyn ::std::error::Error>;
 
     fn try_from(event: &Event) -> Result<Self, Self::Error> {
-        let id = event_id(&event)?;
-        let summary = event_summary(&event);
-        let start = event_start(&event);
-        let end = event_end(&event);
-        let description = event_description(&event)?;
+        let id = event_id(event)?;
+        let summary = event_summary(event);
+        let start = event_start(event);
+        let end = event_end(event);
+        let description = event_description(event)?;
         let location = event.location.clone();
 
         let cal_event = CalEvent {

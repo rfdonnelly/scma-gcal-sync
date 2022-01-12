@@ -8,21 +8,20 @@ use output::GCal;
 use chrono::Local;
 use clap::{AppSettings, ArgEnum, Parser};
 use tracing::info;
-use tracing_subscriber;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 
 #[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
 enum InputType {
     Web,
-    YAML,
+    Yaml,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
 enum OutputType {
     #[clap(name = "gcal")]
     GCal,
-    YAML,
+    Yaml,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -111,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .read()
                 .await?
         }
-        InputType::YAML => {
+        InputType::Yaml => {
             info!(input=?args.input_file, "Reading events");
             let events_yaml = match args.input_file {
                 PipeFile::Pipe => todo!(),
@@ -131,7 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .write(&events)
             .await?;
         }
-        OutputType::YAML => {
+        OutputType::Yaml => {
             info!(output=?args.output_file, "Writing events");
             match args.output_file {
                 PipeFile::Pipe => println!("{}", serde_yaml::to_string(&events)?),

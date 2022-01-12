@@ -103,7 +103,7 @@ impl<'a> Web<'a> {
                 let client = &client;
                 async move {
                     info!(%event.id, %event, url=%event.url, "Fetching event");
-                    let event_page = Page::from_url(&client, &event.url).await?;
+                    let event_page = Page::from_url(client, &event.url).await?;
                     let event = Event::try_from((event, event_page))?;
                     Ok::<Event, Box<dyn std::error::Error>>(event)
                 }
@@ -197,9 +197,9 @@ impl TryFrom<(Event, Page)> for Event {
         let attendees = attendee_names
             .zip(attendee_comments)
             .map(|(name, comment)| {
-                let count = comment.split_once(" ").unwrap().0[1..].parse().unwrap();
+                let count = comment.split_once(' ').unwrap().0[1..].parse().unwrap();
 
-                let comment = comment.split_once(")").unwrap().1.trim().to_string();
+                let comment = comment.split_once(')').unwrap().1.trim().to_string();
 
                 Attendee {
                     name,
@@ -263,7 +263,7 @@ impl FromIterator<Event> for EventList {
 }
 
 fn parse_description(s: &str) -> String {
-    let document = Document::from(s.as_ref());
+    let document = Document::from(s);
     let mut buffer = String::with_capacity(s.len());
     let node = document.find(Name("body")).next().unwrap();
     parse_node_text(&node, &mut buffer);
@@ -297,9 +297,9 @@ fn parse_node_text(node: &Node, buffer: &mut String) {
 fn maybe_newline(node: &Node, buffer: &mut String) {
     let buffer_ends_with_newline = buffer.chars().last().unwrap_or_default() == '\n';
     let is_newline_element = matches!(node.name(), Some("p" | "div"));
-    let insert_newline = buffer.len() > 0 && !buffer_ends_with_newline && is_newline_element;
+    let insert_newline = !buffer.is_empty() && !buffer_ends_with_newline && is_newline_element;
     if insert_newline {
-        buffer.push_str("\n");
+        buffer.push('\n');
     }
 }
 
