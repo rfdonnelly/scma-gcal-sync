@@ -1,5 +1,6 @@
 use crate::model::Event;
 
+use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api::Event as CalEvent, api::EventDateTime, CalendarHub};
 use tracing::info;
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
@@ -12,6 +13,7 @@ pub struct GCal {
 }
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
+const CONCURRENT_REQUESTS: usize = 3;
 
 impl GCal {
     pub async fn new(
@@ -60,9 +62,11 @@ impl GCal {
     }
 
     pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
-        for event in events {
-            self.patch_or_insert_event(event).await?;
-        }
+        stream::iter(events)
+            .map(|event| self.patch_or_insert_event(event))
+            .buffer_unordered(CONCURRENT_REQUESTS)
+            .try_collect::<Vec<_>>()
+            .await?;
 
         Ok(())
     }
