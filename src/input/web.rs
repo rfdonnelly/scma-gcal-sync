@@ -1,20 +1,11 @@
-use crate::model::{
-    Attendee,
-    Comment,
-    Event,
-};
+use crate::model::{Attendee, Comment, Event};
 
 use chrono::NaiveDate;
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
-use select::node::Node;
 use select::node::Data;
-use select::predicate::{
-    And,
-    Attr,
-    Class,
-    Name,
-};
+use select::node::Node;
+use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
 
@@ -36,7 +27,7 @@ impl<'a> Web<'a> {
         username: &'a str,
         password: &'a str,
         base_url: &'a str,
-        min_date: Option<NaiveDate>
+        min_date: Option<NaiveDate>,
     ) -> Self {
         Self {
             username,
@@ -57,7 +48,8 @@ impl<'a> Web<'a> {
 
         let events = match self.min_date {
             None => events,
-            Some(min_date) => events.into_iter()
+            Some(min_date) => events
+                .into_iter()
                 .filter(|event| event.end_date > min_date)
                 .collect(),
         };
@@ -68,23 +60,29 @@ impl<'a> Web<'a> {
     }
 
     fn create_client() -> Result<reqwest::Client, Box<dyn std::error::Error>> {
-        Ok(
-            reqwest::Client::builder()
-                .cookie_store(true)
-                .user_agent("Mozilla/5.0")
-                .build()?
-        )
+        Ok(reqwest::Client::builder()
+            .cookie_store(true)
+            .user_agent("Mozilla/5.0")
+            .build()?)
     }
 
-    async fn login<S>(&self, client: &reqwest::Client, username: S, password: S) -> Result<(), Box<dyn std::error::Error>>
+    async fn login<S>(
+        &self,
+        client: &reqwest::Client,
+        username: S,
+        password: S,
+    ) -> Result<(), Box<dyn std::error::Error>>
     where
-        S: AsRef<str>
+        S: AsRef<str>,
     {
         let url = [self.base_url, LOGIN_PATH].join("");
 
         info!(%url, "Logging in");
 
-        let login_params = [("username", username.as_ref()), ("passwd", password.as_ref())];
+        let login_params = [
+            ("username", username.as_ref()),
+            ("passwd", password.as_ref()),
+        ];
         let rsp = client.post(url).form(&login_params).send().await?;
 
         if !rsp.status().is_success() {
@@ -96,7 +94,10 @@ impl<'a> Web<'a> {
         }
     }
 
-    async fn fetch_events(client: &reqwest::Client, events: EventList) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
+    async fn fetch_events(
+        client: &reqwest::Client,
+        events: EventList,
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events = stream::iter(events)
             .map(|event| {
                 let client = &client;
@@ -108,7 +109,8 @@ impl<'a> Web<'a> {
                 }
             })
             .buffer_unordered(CONCURRENT_REQUESTS)
-            .try_collect::<Vec<_>>().await?
+            .try_collect::<Vec<_>>()
+            .await?
             .tap_mut(|events| events.sort_by_key(|event| event.start_date));
 
         Ok(events)
@@ -126,7 +128,10 @@ impl AsRef<str> for Page {
 }
 
 impl Page {
-    async fn from_url(client: &reqwest::Client, url: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    async fn from_url(
+        client: &reqwest::Client,
+        url: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let rsp = client.get(url).send().await?;
         let text = rsp.text().await?;
 
@@ -178,11 +183,7 @@ impl TryFrom<(Event, Page)> for Event {
                     .trim()
                     .to_string();
 
-                Comment {
-                    author,
-                    date,
-                    text,
-                }
+                Comment { author, date, text }
             })
             .collect();
         let comments = Some(comments);
@@ -193,21 +194,12 @@ impl TryFrom<(Event, Page)> for Event {
         let attendee_comments = document
             .find(Class("number_of_tickets"))
             .map(|node| node.text());
-        let attendees = attendee_names.zip(attendee_comments)
+        let attendees = attendee_names
+            .zip(attendee_comments)
             .map(|(name, comment)| {
-                let count = comment
-                    .split_once(" ")
-                    .unwrap()
-                    .0[1..]
-                    .parse()
-                    .unwrap();
+                let count = comment.split_once(" ").unwrap().0[1..].parse().unwrap();
 
-                let comment = comment
-                    .split_once(")")
-                    .unwrap()
-                    .1
-                    .trim()
-                    .to_string();
+                let comment = comment.split_once(")").unwrap().1.trim().to_string();
 
                 Attendee {
                     name,
@@ -265,7 +257,7 @@ impl IntoIterator for EventList {
 }
 
 impl FromIterator<Event> for EventList {
-    fn from_iter<I: IntoIterator<Item=Event>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = Event>>(iter: I) -> Self {
         Self(Vec::from_iter(iter))
     }
 }
@@ -288,7 +280,7 @@ fn parse_node_text(node: &Node, buffer: &mut String) {
                     "\n" => (),
                     _ => buffer.push_str(text),
                 }
-            },
+            }
             Data::Element(_, _) => {
                 // Handles case where we transition from a non-newline element to a newline element
                 // I.e. Inserts a newline between a non-newline element and a newline element
@@ -296,7 +288,7 @@ fn parse_node_text(node: &Node, buffer: &mut String) {
                 parse_node_text(&child, buffer);
                 // Insert a newline at the end of a newline element
                 maybe_newline(&child, buffer);
-            },
+            }
             Data::Comment(_) => (),
         }
     }
@@ -378,7 +370,7 @@ mod test {
     #[test]
     fn parse_description_basic_html() {
         let input = "<p>Trip Leaders: Chao & C. Irving</p>\r\n<p>2 days of hard climbing in the Needles.  You should be a competent 5.9 climber to attend this outing as there are no easy routes here.  No kidding!</p>";
-        let expected = indoc!{"
+        let expected = indoc! {"
             Trip Leaders: Chao & C. Irving
             2 days of hard climbing in the Needles.  You should be a competent 5.9 climber to attend this outing as there are no easy routes here.  No kidding!
         "};
@@ -388,7 +380,7 @@ mod test {
     #[test]
     fn parse_description_div() {
         let input = "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>";
-        let expected = indoc!{"
+        let expected = indoc! {"
             Camping Fri and Sat nights at Joshua Tree, Ryan Campground.
             Fri and Sat nights : Four campsites:
             \t#3 (2 parking spaces)

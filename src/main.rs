@@ -6,11 +6,7 @@ use input::Web;
 use output::GCal;
 
 use chrono::Local;
-use clap::{
-    AppSettings,
-    ArgEnum,
-    Parser,
-};
+use clap::{AppSettings, ArgEnum, Parser};
 use tracing::info;
 use tracing_subscriber;
 
@@ -57,37 +53,41 @@ struct Args {
     #[clap(long)]
     all: bool,
 
-    #[clap(arg_enum, short, long, default_value="web")]
+    #[clap(arg_enum, short, long, default_value = "web")]
     input: InputType,
     /// The name of the input file to use for the yaml input.
-    #[clap(parse(from_str), long="ifile", default_value="-")]
+    #[clap(parse(from_str), long = "ifile", default_value = "-")]
     input_file: PipeFile,
 
-    #[clap(arg_enum, short, long, default_value="gcal")]
+    #[clap(arg_enum, short, long, default_value = "gcal")]
     output: OutputType,
     /// The name of the output file to use for the yaml output.
-    #[clap(parse(from_str), long="ofile", default_value="-")]
+    #[clap(parse(from_str), long = "ofile", default_value = "-")]
     output_file: PipeFile,
 
     /// Username for the SCMA website (https://rockclimbing.org).
-    #[clap(short, long, default_value="", env="SCMA_USERNAME")]
+    #[clap(short, long, default_value = "", env = "SCMA_USERNAME")]
     username: String,
     /// Password for the SCMA website (https://rockclimbing.org).
-    #[clap(short, long, default_value="", env="SCMA_PASSWORD")]
+    #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
 
     /// The name of the Google Calendar to sync to.
-    #[clap(short, long, default_value="SCMA Test")]
+    #[clap(short, long, default_value = "SCMA Test")]
     calendar: String,
     /// The client secret JSON is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
     ///
     /// This file contains JSON like '{"installed":{"client_id": ... }}'.
-    #[clap(long, default_value="client_secret.json", env="GCAL_CLIENT_SECRET_PATH")]
+    #[clap(
+        long,
+        default_value = "client_secret.json",
+        env = "GCAL_CLIENT_SECRET_PATH"
+    )]
     client_secret_json_path: String,
     /// The token JSON file is created, written, and read by the application to persist the
     /// authentication token.
-    #[clap(long, default_value="token.json", env="GCAL_OAUTH_TOKEN_JSON_PATH")]
+    #[clap(long, default_value = "token.json", env = "GCAL_OAUTH_TOKEN_JSON_PATH")]
     oauth_token_json_path: String,
 }
 
@@ -107,12 +107,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let events = match args.input {
         InputType::Web => {
-            Web::new(
-                &args.username,
-                &args.password,
-                BASE_URL,
-                min_date,
-            ).read().await?
+            Web::new(&args.username, &args.password, BASE_URL, min_date)
+                .read()
+                .await?
         }
         InputType::YAML => {
             info!(input=?args.input_file, "Reading events");
@@ -130,7 +127,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &args.calendar,
                 &args.client_secret_json_path,
                 &args.oauth_token_json_path,
-            ).write(&events).await?;
+            )
+            .write(&events)
+            .await?;
         }
         OutputType::YAML => {
             info!(output=?args.output_file, "Writing events");

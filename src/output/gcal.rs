@@ -1,17 +1,8 @@
-use crate::model::{
-    Event,
-};
+use crate::model::Event;
 
-use google_calendar3::{
-    api::Event as CalEvent,
-    api::EventDateTime,
-    CalendarHub,
-};
+use google_calendar3::{api::Event as CalEvent, api::EventDateTime, CalendarHub};
 use tracing::info;
-use yup_oauth2::{
-    InstalledFlowAuthenticator,
-    InstalledFlowReturnMethod,
-};
+use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 use std::fmt::Write;
 
@@ -40,22 +31,19 @@ impl<'a> GCal<'a> {
         let secret = yup_oauth2::read_application_secret(self.client_secret_json_path).await?;
 
         info!("Authenticating");
-        let auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-            .persist_tokens_to_disk(self.oauth_token_json_path)
-            .build()
-            .await?;
+        let auth =
+            InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
+                .persist_tokens_to_disk(self.oauth_token_json_path)
+                .build()
+                .await?;
 
-        let client = hyper::Client::builder()
-            .build(hyper_rustls::HttpsConnector::with_native_roots());
+        let client =
+            hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
 
         let hub = CalendarHub::new(client, auth);
 
         info!("Listing calendars");
-        let (_, list) = hub
-            .calendar_list()
-            .list()
-            .doit()
-            .await?;
+        let (_, list) = hub.calendar_list().list().doit().await?;
         let calendars = list.items.unwrap();
 
         info!(calendar_name=%self.calendar_name, "Finding calendar");
@@ -71,7 +59,11 @@ impl<'a> GCal<'a> {
 
             let _rsp = {
                 let event_id = cal_event.id.as_ref().unwrap().clone();
-                let result = hub.events().patch(cal_event.clone(), calendar_id, &event_id).doit().await;
+                let result = hub
+                    .events()
+                    .patch(cal_event.clone(), calendar_id, &event_id)
+                    .doit()
+                    .await;
                 match result {
                     Err(_) => {
                         let rsp = hub.events().insert(cal_event, calendar_id).doit().await?;
@@ -149,7 +141,11 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     if let Some(attendees) = event.attendees.as_ref() {
         write!(buffer, "<h3>Attendees</h3><ul>")?;
         for attendee in attendees {
-            write!(buffer, "<li>{} ({}) {}</li>", attendee.name, attendee.count, attendee.comment)?;
+            write!(
+                buffer,
+                "<li>{} ({}) {}</li>",
+                attendee.name, attendee.count, attendee.comment
+            )?;
         }
         write!(buffer, "</ul>")?;
     }
@@ -157,7 +153,11 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     if let Some(comments) = event.comments.as_ref() {
         write!(buffer, "<h3>Comments</h3><ul>")?;
         for comment in comments {
-            write!(buffer, "<li>{} ({}) {}</li>", comment.author, comment.date, comment.text)?;
+            write!(
+                buffer,
+                "<li>{} ({}) {}</li>",
+                comment.author, comment.date, comment.text
+            )?;
         }
         write!(buffer, "</ul>")?;
     }

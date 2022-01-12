@@ -1,5 +1,5 @@
-use chrono::{NaiveDate, DateTime, Local, FixedOffset};
-use serde::{Serialize, Deserialize, Serializer};
+use chrono::{DateTime, FixedOffset, Local, NaiveDate};
+use serde::{Deserialize, Serialize, Serializer};
 
 use std::fmt;
 
@@ -40,7 +40,7 @@ pub struct Comment {
 
 fn serialize_datetime_pacific<S>(dt: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: Serializer
+    S: Serializer,
 {
     let pacific = FixedOffset::west(8 * 60 * 60);
     let s = dt.with_timezone(&pacific).to_rfc3339();
