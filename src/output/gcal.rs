@@ -8,32 +8,34 @@ use std::fmt::Write;
 
 pub struct GCal<'a> {
     calendar_name: &'a str,
-    client_secret_json_path: &'a str,
-    oauth_token_json_path: &'a str,
+    hub: CalendarHub,
 }
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 
 impl<'a> GCal<'a> {
-    pub fn new(
+    pub async fn new(
         calendar_name: &'a str,
-        client_secret_json_path: &'a str,
-        oauth_token_json_path: &'a str,
-    ) -> Self {
-        Self {
-            calendar_name,
-            client_secret_json_path,
-            oauth_token_json_path,
-        }
+        client_secret_json_path: &str,
+        oauth_token_json_path: &str,
+    ) -> Result<GCal<'a>, Box<dyn std::error::Error>> {
+        let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
+
+        let gcal = Self { calendar_name, hub };
+
+        Ok(gcal)
     }
 
-    pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
-        let secret = yup_oauth2::read_application_secret(self.client_secret_json_path).await?;
+    async fn create_hub(
+        client_secret_json_path: &str,
+        oauth_token_json_path: &str,
+    ) -> Result<CalendarHub, Box<dyn std::error::Error>> {
+        let secret = yup_oauth2::read_application_secret(client_secret_json_path).await?;
 
         info!("Authenticating");
         let auth =
             InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-                .persist_tokens_to_disk(self.oauth_token_json_path)
+                .persist_tokens_to_disk(oauth_token_json_path)
                 .build()
                 .await?;
 
@@ -42,8 +44,12 @@ impl<'a> GCal<'a> {
 
         let hub = CalendarHub::new(client, auth);
 
+        Ok(hub)
+    }
+
+    pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
         info!("Listing calendars");
-        let (_, list) = hub.calendar_list().list().doit().await?;
+        let (_, list) = self.hub.calendar_list().list().doit().await?;
         let calendars = list.items.unwrap();
 
         info!(calendar_name=%self.calendar_name, "Finding calendar");
@@ -59,14 +65,20 @@ impl<'a> GCal<'a> {
 
             let _rsp = {
                 let event_id = cal_event.id.as_ref().unwrap().clone();
-                let result = hub
+                let result = self
+                    .hub
                     .events()
                     .patch(cal_event.clone(), calendar_id, &event_id)
                     .doit()
                     .await;
                 match result {
                     Err(_) => {
-                        let rsp = hub.events().insert(cal_event, calendar_id).doit().await?;
+                        let rsp = self
+                            .hub
+                            .events()
+                            .insert(cal_event, calendar_id)
+                            .doit()
+                            .await?;
                         let link = rsp.1.html_link.as_ref().unwrap();
                         info!(%event.id, %event, %link, "Inserted");
                         rsp

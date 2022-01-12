@@ -128,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &args.client_secret_json_path,
                 &args.oauth_token_json_path,
             )
+            .await?
             .write(&events)
             .await?;
         }
