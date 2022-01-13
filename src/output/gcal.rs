@@ -169,7 +169,8 @@ fn event_end(event: &Event) -> EventDateTime {
 
 fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Error>> {
     let mut buffer = String::with_capacity(DESCRIPTION_BUFFER_SIZE);
-    write!(buffer, "{}\n\n", event.url)?;
+    write!(buffer, "{}", event.url)?;
+    write!(buffer, "<h3>Description</h3>")?;
     write!(buffer, "{}", event.description)?;
 
     write!(buffer, "<h3>Attendees</h3>")?;
