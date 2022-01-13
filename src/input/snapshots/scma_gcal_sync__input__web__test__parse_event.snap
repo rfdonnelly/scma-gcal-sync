@@ -1,6 +1,6 @@
 ---
 source: src/input/web.rs
-assertion_line: 352
+assertion_line: 314
 expression: event
 
 ---
@@ -64,4 +64,5 @@ attendees:
   - name: Alexander (AJ) Mody
     count: 2
     comment: Planning to stay Friday Night only.
+timestamp: "1970-01-01T00:00:00Z"
 

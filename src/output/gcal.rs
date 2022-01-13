@@ -169,31 +169,49 @@ fn event_end(event: &Event) -> EventDateTime {
 
 fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Error>> {
     let mut buffer = String::with_capacity(DESCRIPTION_BUFFER_SIZE);
-    write!(buffer, "{}\n\n", event.url)?;
+    write!(buffer, "{}", event.url)?;
+    write!(buffer, "<h3>Description</h3>")?;
     write!(buffer, "{}", event.description)?;
 
-    if let Some(attendees) = event.attendees.as_ref() {
-        write!(buffer, "<h3>Attendees</h3><ul>")?;
-        for attendee in attendees {
-            write!(
-                buffer,
-                "<li>{} ({}) {}</li>",
-                attendee.name, attendee.count, attendee.comment
-            )?;
+    write!(buffer, "<h3>Attendees</h3>")?;
+    match event.attendees.as_ref() {
+        Some(attendees) => {
+            write!(buffer, "<ol>")?;
+            for attendee in attendees {
+                write!(
+                    buffer,
+                    "<li>{} ({}) {}</li>",
+                    attendee.name, attendee.count, attendee.comment
+                )?;
+            }
+            write!(buffer, "</ol>")?;
         }
-        write!(buffer, "</ul>")?;
+        None => {
+            write!(buffer, "None")?;
+        }
     }
 
-    if let Some(comments) = event.comments.as_ref() {
-        write!(buffer, "<h3>Comments</h3><ul>")?;
-        for comment in comments {
-            write!(
-                buffer,
-                "<li>{} ({}) {}</li>",
-                comment.author, comment.date, comment.text
-            )?;
+    write!(buffer, "<h3>Comments</h3>")?;
+    match event.comments.as_ref() {
+        Some(comments) => {
+            write!(buffer, "<ul>")?;
+            for comment in comments {
+                write!(
+                    buffer,
+                    "<li>{} ({}) {}</li>",
+                    comment.author, comment.date, comment.text
+                )?;
+            }
+            write!(buffer, "</ul>")?;
         }
-        write!(buffer, "</ul>")?;
+        None => {
+            write!(buffer, "None")?;
+        }
+    }
+
+    if let Some(timestamp) = event.timestamp {
+        let pacific = chrono::FixedOffset::west(8 * 60 * 60);
+        write!(buffer, "\n\nLast synced at {} by <a href='https://github.com/rfdonnelly/scma-gcal-sync'>scma-gcal-sync</a>.", timestamp.with_timezone(&pacific).to_rfc3339_opts(chrono::SecondsFormat::Secs, false))?;
     }
 
     Ok(buffer)

@@ -1,10 +1,8 @@
 use crate::model::{Attendee, Comment, Event};
 
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
-use select::node::Data;
-use select::node::Node;
 use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
@@ -112,7 +110,8 @@ impl<'a> Web<'a> {
     ) -> Result<Event, Box<dyn std::error::Error>> {
         info!(%event.id, %event, url=%event.url, "Fetching event");
         let event_page = Page::from_url(&self.client, &event.url).await?;
-        let event = Event::try_from((event, event_page))?;
+        let timestamp = Utc::now();
+        let event = Event::try_from((event, event_page, timestamp))?;
         Ok(event)
     }
 }
@@ -139,11 +138,11 @@ impl Page {
     }
 }
 
-impl TryFrom<(Event, Page)> for Event {
+impl TryFrom<(Event, Page, DateTime<Utc>)> for Event {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(event_page_pair: (Event, Page)) -> Result<Self, Self::Error> {
-        let (event_item, page) = event_page_pair;
+    fn try_from(event_page_timestamp: (Event, Page, DateTime<Utc>)) -> Result<Self, Self::Error> {
+        let (event_item, page, timestamp) = event_page_timestamp;
 
         let id = event_item.id;
         let title = event_item.title;
@@ -155,7 +154,7 @@ impl TryFrom<(Event, Page)> for Event {
 
         let document = Document::from(page.as_ref());
 
-        let comments = document
+        let comments: Vec<Comment> = document
             .find(Class("kmt-wrap"))
             .map(|node| {
                 let author = node
@@ -186,7 +185,11 @@ impl TryFrom<(Event, Page)> for Event {
                 Comment { author, date, text }
             })
             .collect();
-        let comments = Some(comments);
+        let comments = if comments.is_empty() {
+            None
+        } else {
+            Some(comments)
+        };
 
         let attendee_names = document
             .find(Class("attendee_name"))
@@ -194,7 +197,7 @@ impl TryFrom<(Event, Page)> for Event {
         let attendee_comments = document
             .find(Class("number_of_tickets"))
             .map(|node| node.text());
-        let attendees = attendee_names
+        let attendees: Vec<Attendee> = attendee_names
             .zip(attendee_comments)
             .map(|(name, comment)| {
                 let count = comment.split_once(' ').unwrap().0[1..].parse().unwrap();
@@ -208,7 +211,13 @@ impl TryFrom<(Event, Page)> for Event {
                 }
             })
             .collect();
-        let attendees = Some(attendees);
+        let attendees = if attendees.is_empty() {
+            None
+        } else {
+            Some(attendees)
+        };
+
+        let timestamp = Some(timestamp);
 
         let event = Event {
             id,
@@ -220,6 +229,7 @@ impl TryFrom<(Event, Page)> for Event {
             description,
             comments,
             attendees,
+            timestamp,
         };
 
         Ok(event)
@@ -236,12 +246,11 @@ impl TryFrom<(&str, Page)> for EventList {
     fn try_from(url_page: (&str, Page)) -> Result<Self, Self::Error> {
         let (base_url, page) = url_page;
 
-        let mut events: Vec<Event> = serde_json::from_str(page.as_ref())?;
-
-        for event in &mut events {
-            event.url = [base_url, &event.url].join("");
-            event.description = parse_description(&event.description);
-        }
+        let events = serde_json::from_str::<Vec<Event>>(page.as_ref())?.tap_mut(|events| {
+            events
+                .iter_mut()
+                .for_each(|event| event.url = [base_url, &event.url].join(""))
+        });
 
         Ok(Self(events))
     }
@@ -262,52 +271,11 @@ impl FromIterator<Event> for EventList {
     }
 }
 
-fn parse_description(s: &str) -> String {
-    let document = Document::from(s);
-    let mut buffer = String::with_capacity(s.len());
-    let node = document.find(Name("body")).next().unwrap();
-    parse_node_text(&node, &mut buffer);
-    buffer
-}
-
-fn parse_node_text(node: &Node, buffer: &mut String) {
-    for child in node.children() {
-        match child.data() {
-            Data::Text(_) => {
-                let text = child.as_text().unwrap();
-                match text {
-                    // Ignore newline-only text elements
-                    "\n" => (),
-                    _ => buffer.push_str(text),
-                }
-            }
-            Data::Element(_, _) => {
-                // Handles case where we transition from a non-newline element to a newline element
-                // I.e. Inserts a newline between a non-newline element and a newline element
-                maybe_newline(&child, buffer);
-                parse_node_text(&child, buffer);
-                // Insert a newline at the end of a newline element
-                maybe_newline(&child, buffer);
-            }
-            Data::Comment(_) => (),
-        }
-    }
-}
-
-fn maybe_newline(node: &Node, buffer: &mut String) {
-    let buffer_ends_with_newline = buffer.chars().last().unwrap_or_default() == '\n';
-    let is_newline_element = matches!(node.name(), Some("p" | "div"));
-    let insert_newline = !buffer.is_empty() && !buffer_ends_with_newline && is_newline_element;
-    if insert_newline {
-        buffer.push('\n');
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
-    use indoc::indoc;
+    use chrono::TimeZone;
 
     use std::path::{Path, PathBuf};
 
@@ -339,8 +307,10 @@ mod test {
             description: "a description".into(),
             comments: None,
             attendees: None,
+            timestamp: None,
         };
-        let event = Event::try_from((event_item, page)).unwrap();
+        let timestamp = Utc.timestamp(0, 0);
+        let event = Event::try_from((event_item, page, timestamp)).unwrap();
         insta::assert_yaml_snapshot!(event);
     }
 
@@ -351,44 +321,5 @@ mod test {
         let base_url = "https://www.rockclimbing.org";
         let events = EventList::try_from((base_url, page)).unwrap();
         insta::assert_yaml_snapshot!(events);
-    }
-
-    #[test]
-    fn parse_description_blank() {
-        let input = "";
-        let expected = "";
-        assert_eq!(parse_description(input), expected);
-    }
-
-    #[test]
-    fn parse_description_text() {
-        let input = "Trip Leader: Mike Sauter";
-        let expected = "Trip Leader: Mike Sauter";
-        assert_eq!(parse_description(input), expected);
-    }
-
-    #[test]
-    fn parse_description_basic_html() {
-        let input = "<p>Trip Leaders: Chao & C. Irving</p>\r\n<p>2 days of hard climbing in the Needles.  You should be a competent 5.9 climber to attend this outing as there are no easy routes here.  No kidding!</p>";
-        let expected = indoc! {"
-            Trip Leaders: Chao & C. Irving
-            2 days of hard climbing in the Needles.  You should be a competent 5.9 climber to attend this outing as there are no easy routes here.  No kidding!
-        "};
-        assert_eq!(parse_description(input), expected);
-    }
-
-    #[test]
-    fn parse_description_div() {
-        let input = "<font face=\"Arial, Verdana\"><span style=\"font-size: 13.3333px;\">Camping Fri and Sat nights at Joshua Tree, Ryan Campground.</span></font><div><font face=\"Arial, Verdana\"><div style=\"font-size: 13.3333px;\">Fri and Sat nights : Four campsites:</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#3 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#4 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space:pre\">\t</span>#6 (2 parking spaces)</div><div style=\"font-size: 13.3333px;\"><span style=\"white-space: pre;\">\t</span>#7 (2 parking spaces)</div><div style=\"style\"><span style=\"font-size: 13.3333px;\">Trip Leader: Rob Donnelly</span></div></font></div>";
-        let expected = indoc! {"
-            Camping Fri and Sat nights at Joshua Tree, Ryan Campground.
-            Fri and Sat nights : Four campsites:
-            \t#3 (2 parking spaces)
-            \t#4 (2 parking spaces)
-            \t#6 (2 parking spaces)
-            \t#7 (2 parking spaces)
-            Trip Leader: Rob Donnelly
-        "};
-        assert_eq!(parse_description(input), expected);
     }
 }
