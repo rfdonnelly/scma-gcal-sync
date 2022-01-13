@@ -1,5 +1,6 @@
 use crate::model::Event;
 
+use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api::Event as CalEvent, api::EventDateTime, CalendarHub};
 use tracing::info;
@@ -152,8 +153,16 @@ fn event_start(event: &Event) -> EventDateTime {
 }
 
 fn event_end(event: &Event) -> EventDateTime {
+    // WORKAROUND: Google Calendar seems to require all-day-multi-day events to end on the day
+    // after.  Otherwise they show as 1 day short.
+    let end_date = if event.start_date == event.end_date {
+        event.end_date
+    } else {
+        event.end_date + Duration::days(1)
+    };
+
     EventDateTime {
-        date: Some(event.end_date.to_string()),
+        date: Some(end_date.to_string()),
         ..Default::default()
     }
 }
