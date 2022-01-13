@@ -172,28 +172,40 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     write!(buffer, "{}\n\n", event.url)?;
     write!(buffer, "{}", event.description)?;
 
-    if let Some(attendees) = event.attendees.as_ref() {
-        write!(buffer, "<h3>Attendees</h3><ol>")?;
-        for attendee in attendees {
-            write!(
-                buffer,
-                "<li>{} ({}) {}</li>",
-                attendee.name, attendee.count, attendee.comment
-            )?;
+    write!(buffer, "<h3>Attendees</h3>")?;
+    match event.attendees.as_ref() {
+        Some(attendees) => {
+            write!(buffer, "<ol>")?;
+            for attendee in attendees {
+                write!(
+                    buffer,
+                    "<li>{} ({}) {}</li>",
+                    attendee.name, attendee.count, attendee.comment
+                )?;
+            }
+            write!(buffer, "</ol>")?;
         }
-        write!(buffer, "</ol>")?;
+        None => {
+            write!(buffer, "None")?;
+        }
     }
 
-    if let Some(comments) = event.comments.as_ref() {
-        write!(buffer, "<h3>Comments</h3><ul>")?;
-        for comment in comments {
-            write!(
-                buffer,
-                "<li>{} ({}) {}</li>",
-                comment.author, comment.date, comment.text
-            )?;
+    write!(buffer, "<h3>Comments</h3>")?;
+    match event.comments.as_ref() {
+        Some(comments) => {
+            write!(buffer, "<ul>")?;
+            for comment in comments {
+                write!(
+                    buffer,
+                    "<li>{} ({}) {}</li>",
+                    comment.author, comment.date, comment.text
+                )?;
+            }
+            write!(buffer, "</ul>")?;
         }
-        write!(buffer, "</ul>")?;
+        None => {
+            write!(buffer, "None")?;
+        }
     }
 
     Ok(buffer)

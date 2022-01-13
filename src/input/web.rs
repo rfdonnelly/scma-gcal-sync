@@ -153,7 +153,7 @@ impl TryFrom<(Event, Page)> for Event {
 
         let document = Document::from(page.as_ref());
 
-        let comments = document
+        let comments: Vec<Comment> = document
             .find(Class("kmt-wrap"))
             .map(|node| {
                 let author = node
@@ -184,7 +184,11 @@ impl TryFrom<(Event, Page)> for Event {
                 Comment { author, date, text }
             })
             .collect();
-        let comments = Some(comments);
+        let comments = if comments.is_empty() {
+            None
+        } else {
+            Some(comments)
+        };
 
         let attendee_names = document
             .find(Class("attendee_name"))
@@ -192,7 +196,7 @@ impl TryFrom<(Event, Page)> for Event {
         let attendee_comments = document
             .find(Class("number_of_tickets"))
             .map(|node| node.text());
-        let attendees = attendee_names
+        let attendees: Vec<Attendee> = attendee_names
             .zip(attendee_comments)
             .map(|(name, comment)| {
                 let count = comment.split_once(' ').unwrap().0[1..].parse().unwrap();
@@ -206,7 +210,11 @@ impl TryFrom<(Event, Page)> for Event {
                 }
             })
             .collect();
-        let attendees = Some(attendees);
+        let attendees = if attendees.is_empty() {
+            None
+        } else {
+            Some(attendees)
+        };
 
         let event = Event {
             id,
