@@ -1,6 +1,6 @@
 use crate::model::{Attendee, Comment, Event};
 
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
 use select::predicate::{And, Attr, Class, Name};
@@ -110,7 +110,8 @@ impl<'a> Web<'a> {
     ) -> Result<Event, Box<dyn std::error::Error>> {
         info!(%event.id, %event, url=%event.url, "Fetching event");
         let event_page = Page::from_url(&self.client, &event.url).await?;
-        let event = Event::try_from((event, event_page))?;
+        let timestamp = Utc::now();
+        let event = Event::try_from((event, event_page, timestamp))?;
         Ok(event)
     }
 }
@@ -137,11 +138,11 @@ impl Page {
     }
 }
 
-impl TryFrom<(Event, Page)> for Event {
+impl TryFrom<(Event, Page, DateTime<Utc>)> for Event {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(event_page_pair: (Event, Page)) -> Result<Self, Self::Error> {
-        let (event_item, page) = event_page_pair;
+    fn try_from(event_page_timestamp: (Event, Page, DateTime<Utc>)) -> Result<Self, Self::Error> {
+        let (event_item, page, timestamp) = event_page_timestamp;
 
         let id = event_item.id;
         let title = event_item.title;
@@ -216,6 +217,8 @@ impl TryFrom<(Event, Page)> for Event {
             Some(attendees)
         };
 
+        let timestamp = Some(timestamp);
+
         let event = Event {
             id,
             title,
@@ -226,6 +229,7 @@ impl TryFrom<(Event, Page)> for Event {
             description,
             comments,
             attendees,
+            timestamp,
         };
 
         Ok(event)
@@ -271,6 +275,8 @@ impl FromIterator<Event> for EventList {
 mod test {
     use super::*;
 
+    use chrono::TimeZone;
+
     use std::path::{Path, PathBuf};
 
     impl Page {
@@ -301,8 +307,10 @@ mod test {
             description: "a description".into(),
             comments: None,
             attendees: None,
+            timestamp: None,
         };
-        let event = Event::try_from((event_item, page)).unwrap();
+        let timestamp = Utc.timestamp(0, 0);
+        let event = Event::try_from((event_item, page, timestamp)).unwrap();
         insta::assert_yaml_snapshot!(event);
     }
 

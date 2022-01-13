@@ -209,5 +209,10 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
         }
     }
 
+    if let Some(timestamp) = event.timestamp {
+        let pacific = chrono::FixedOffset::west(8 * 60 * 60);
+        write!(buffer, "\n\nLast synced at {} by <a href='https://github.com/rfdonnelly/scma-gcal-sync'>scma-gcal-sync</a>.", timestamp.with_timezone(&pacific).to_rfc3339_opts(chrono::SecondsFormat::Secs, false))?;
+    }
+
     Ok(buffer)
 }

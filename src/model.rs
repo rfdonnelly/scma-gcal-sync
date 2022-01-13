@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, Local, NaiveDate};
+use chrono::{DateTime, FixedOffset, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize, Serializer};
 
 use std::fmt;
@@ -22,6 +22,9 @@ pub struct Event {
     // Not present in SCMA JSON
     #[serde(default)]
     pub attendees: Option<Vec<Attendee>>,
+    /// The date and time the event page was downloaded.
+    #[serde(default)]
+    pub timestamp: Option<DateTime<Utc>>,
 }
 
 impl fmt::Display for Event {
