@@ -74,7 +74,7 @@ struct Args {
     password: String,
 
     /// The name of the Google Calendar to sync to.
-    #[clap(short, long, default_value = "SCMA Test")]
+    #[clap(short, long, default_value = "SCMA")]
     calendar: String,
     /// The client secret JSON is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
