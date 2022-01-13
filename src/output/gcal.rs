@@ -173,7 +173,7 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     write!(buffer, "{}", event.description)?;
 
     if let Some(attendees) = event.attendees.as_ref() {
-        write!(buffer, "<h3>Attendees</h3><ul>")?;
+        write!(buffer, "<h3>Attendees</h3><ol>")?;
         for attendee in attendees {
             write!(
                 buffer,
@@ -181,7 +181,7 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
                 attendee.name, attendee.count, attendee.comment
             )?;
         }
-        write!(buffer, "</ul>")?;
+        write!(buffer, "</ol>")?;
     }
 
     if let Some(comments) = event.comments.as_ref() {
