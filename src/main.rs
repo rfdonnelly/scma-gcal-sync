@@ -2,14 +2,16 @@ mod input;
 mod model;
 mod output;
 
-use input::Web;
+use input::{EventList, Web};
 use output::GCal;
 
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 use clap::{AppSettings, ArgEnum, Parser};
+use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
+const CONCURRENT_REQUESTS: usize = 3;
 
 #[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
 enum InputType {
@@ -104,42 +106,84 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Local::today().naive_local())
     };
 
-    let events = match args.input {
-        InputType::Web => {
-            Web::new(&args.username, &args.password, BASE_URL, min_date)
-                .await?
-                .read()
-                .await?
-        }
-        InputType::Yaml => {
-            info!(input=?args.input_file, "Reading events");
-            let events_yaml = match args.input_file {
-                PipeFile::Pipe => todo!(),
-                PipeFile::File(path) => std::fs::read_to_string(&path)?,
-            };
-            serde_yaml::from_str(&events_yaml)?
-        }
-    };
+    match (args.input, args.output) {
+        (InputType::Web, OutputType::GCal) => {
+            // Handle this case specially to maximize concurrency
+            //
+            // I've found it difficult to do this in a more general fashion.
+            let ((web, events), gcal) = tokio::try_join!(
+                web_events(&args.username, &args.password, min_date),
+                GCal::new(
+                    &args.calendar,
+                    &args.client_secret_json_path,
+                    &args.oauth_token_json_path,
+                ),
+            )?;
 
-    match args.output {
-        OutputType::GCal => {
-            GCal::new(
-                &args.calendar,
-                &args.client_secret_json_path,
-                &args.oauth_token_json_path,
-            )
-            .await?
-            .write(&events)
-            .await?;
+            stream::iter(events)
+                .map(|event| scma_to_gcal(event, &web, &gcal))
+                .buffer_unordered(CONCURRENT_REQUESTS)
+                .try_collect::<Vec<_>>()
+                .await?;
         }
-        OutputType::Yaml => {
-            info!(output=?args.output_file, "Writing events");
-            match args.output_file {
-                PipeFile::Pipe => println!("{}", serde_yaml::to_string(&events)?),
-                PipeFile::File(_) => todo!(),
+        _ => {
+            let events = match args.input {
+                InputType::Web => {
+                    Web::new(&args.username, &args.password, BASE_URL, min_date)
+                        .await?
+                        .read()
+                        .await?
+                }
+                InputType::Yaml => {
+                    info!(input=?args.input_file, "Reading events");
+                    let events_yaml = match args.input_file {
+                        PipeFile::Pipe => todo!(),
+                        PipeFile::File(path) => std::fs::read_to_string(&path)?,
+                    };
+                    serde_yaml::from_str(&events_yaml)?
+                }
+            };
+
+            match args.output {
+                OutputType::GCal => {
+                    GCal::new(
+                        &args.calendar,
+                        &args.client_secret_json_path,
+                        &args.oauth_token_json_path,
+                    )
+                    .await?
+                    .write(&events)
+                    .await?;
+                }
+                OutputType::Yaml => {
+                    info!(output=?args.output_file, "Writing events");
+                    match args.output_file {
+                        PipeFile::Pipe => println!("{}", serde_yaml::to_string(&events)?),
+                        PipeFile::File(_) => todo!(),
+                    }
+                }
             }
         }
     }
 
     Ok(())
+}
+
+async fn scma_to_gcal(
+    event: model::Event,
+    web: &Web<'_>,
+    gcal: &GCal,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let event = web.fetch_event_details(event).await?;
+    gcal.patch_or_insert_event(&event).await
+}
+
+async fn web_events<'a>(
+    username: &str,
+    password: &str,
+    min_date: Option<NaiveDate>,
+) -> Result<(Web<'a>, EventList), Box<dyn std::error::Error>> {
+    let web = Web::new(username, password, BASE_URL, min_date).await?;
+    let events = web.fetch_events().await?;
+    Ok((web, events))
 }

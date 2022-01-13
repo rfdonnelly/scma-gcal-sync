@@ -71,7 +71,10 @@ impl GCal {
         Ok(())
     }
 
-    async fn patch_or_insert_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn patch_or_insert_event(
+        &self,
+        event: &Event,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let cal_event = CalEvent::try_from(event)?;
 
         let _rsp = {

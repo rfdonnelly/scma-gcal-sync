@@ -47,7 +47,7 @@ impl<'a> Web<'a> {
         Ok(events)
     }
 
-    async fn fetch_events(&self) -> Result<EventList, Box<dyn std::error::Error>> {
+    pub async fn fetch_events(&self) -> Result<EventList, Box<dyn std::error::Error>> {
         let events_url = [self.base_url, EVENTS_PATH].join("");
         info!(url=%events_url, "Fetching event list page");
         let events_page = Page::from_url(&self.client, &events_url).await?;
@@ -106,7 +106,10 @@ impl<'a> Web<'a> {
         Ok(events)
     }
 
-    async fn fetch_event_details(&self, event: Event) -> Result<Event, Box<dyn std::error::Error>> {
+    pub async fn fetch_event_details(
+        &self,
+        event: Event,
+    ) -> Result<Event, Box<dyn std::error::Error>> {
         info!(%event.id, %event, url=%event.url, "Fetching event");
         let event_page = Page::from_url(&self.client, &event.url).await?;
         let event = Event::try_from((event, event_page))?;
@@ -225,7 +228,7 @@ impl TryFrom<(Event, Page)> for Event {
 
 use serde::Serialize;
 #[derive(Serialize)]
-struct EventList(Vec<Event>);
+pub struct EventList(Vec<Event>);
 
 impl TryFrom<(&str, Page)> for EventList {
     type Error = Box<dyn std::error::Error>;
