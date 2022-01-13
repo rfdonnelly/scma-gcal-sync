@@ -234,11 +234,11 @@ impl TryFrom<(&str, Page)> for EventList {
     fn try_from(url_page: (&str, Page)) -> Result<Self, Self::Error> {
         let (base_url, page) = url_page;
 
-        let mut events: Vec<Event> = serde_json::from_str(page.as_ref())?;
-
-        for event in &mut events {
-            event.url = [base_url, &event.url].join("");
-        }
+        let events = serde_json::from_str::<Vec<Event>>(page.as_ref())?.tap_mut(|events| {
+            events
+                .iter_mut()
+                .for_each(|event| event.url = [base_url, &event.url].join(""))
+        });
 
         Ok(Self(events))
     }
