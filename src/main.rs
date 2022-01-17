@@ -48,8 +48,8 @@ impl From<&str> for PipeFile {
 #[clap(about, version, author)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct Args {
-    /// Include past events. Without this option, only present (active) and future events will be
-    /// sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
+    /// Include past events. Without this option, only present (in-progress) and future events will
+    /// be sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
     /// applicable to the web input.
     #[clap(long)]
     all: bool,
