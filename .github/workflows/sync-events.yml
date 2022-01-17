@@ -1,4 +1,4 @@
-name: Sync
+name: Sync Events
 on:
   workflow_dispatch:
   schedule:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Sync
+    name: Sync Events
     runs-on: ubuntu-latest
     steps:
       - name: Download latest release
