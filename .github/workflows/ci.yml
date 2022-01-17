@@ -2,6 +2,9 @@
 
 on: [push, pull_request]
 
+env:
+  CARGO_TERM_COLOR: always
+
 name: CI
 
 jobs:
@@ -23,7 +26,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --color always
 
   test:
     name: Test Suite
@@ -43,7 +45,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --color always -- --color always
 
   lints:
     name: Lints
@@ -64,10 +65,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check --color always
+          args: --all -- --check
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --color always -- -D warnings
+          args: -- -D warnings
