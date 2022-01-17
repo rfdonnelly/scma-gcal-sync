@@ -56,3 +56,12 @@ pub struct Attendee {
     pub count: u8,
     pub comment: String,
 }
+
+/// Provides event selection by date
+#[derive(Copy, Clone)]
+pub enum DateSelect {
+    /// All events
+    All,
+    /// Only present (in-progress) and future events
+    NotPast,
+}

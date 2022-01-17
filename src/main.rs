@@ -3,9 +3,9 @@ mod model;
 mod output;
 
 use input::{EventList, Web};
+use model::DateSelect;
 use output::GCal;
 
-use chrono::{Local, NaiveDate};
 use clap::{AppSettings, ArgEnum, Parser};
 use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
@@ -100,10 +100,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let min_date = if args.all {
-        None
+    let dates = if args.all {
+        DateSelect::All
     } else {
-        Some(Local::today().naive_local())
+        DateSelect::NotPast
     };
 
     match (args.input, args.output) {
@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             //
             // I've found it difficult to do this in a more general fashion.
             let ((web, events), gcal) = tokio::try_join!(
-                web_events(&args.username, &args.password, min_date),
+                web_events(&args.username, &args.password, dates),
                 GCal::new(
                     &args.calendar,
                     &args.client_secret_json_path,
@@ -129,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             let events = match args.input {
                 InputType::Web => {
-                    Web::new(&args.username, &args.password, BASE_URL, min_date)
+                    Web::new(&args.username, &args.password, BASE_URL, dates)
                         .await?
                         .read()
                         .await?
@@ -181,9 +181,9 @@ async fn scma_to_gcal(
 async fn web_events<'a>(
     username: &str,
     password: &str,
-    min_date: Option<NaiveDate>,
+    dates: DateSelect,
 ) -> Result<(Web<'a>, EventList), Box<dyn std::error::Error>> {
-    let web = Web::new(username, password, BASE_URL, min_date).await?;
+    let web = Web::new(username, password, BASE_URL, dates).await?;
     let events = web.fetch_events().await?;
     Ok((web, events))
 }

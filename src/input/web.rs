@@ -1,6 +1,6 @@
-use crate::model::{Attendee, Comment, Event};
+use crate::model::{Attendee, Comment, DateSelect, Event};
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
 use select::predicate::{And, Attr, Class, Name};
@@ -15,7 +15,7 @@ const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
     base_url: &'a str,
-    min_date: Option<NaiveDate>,
+    dates: DateSelect,
     client: reqwest::Client,
 }
 
@@ -24,13 +24,13 @@ impl<'a> Web<'a> {
         username: &str,
         password: &str,
         base_url: &'a str,
-        min_date: Option<NaiveDate>,
+        dates: DateSelect,
     ) -> Result<Web<'a>, Box<dyn std::error::Error>> {
         let client = Self::create_client()?;
 
         let web = Self {
             base_url,
-            min_date,
+            dates,
             client,
         };
 
@@ -46,18 +46,14 @@ impl<'a> Web<'a> {
     }
 
     pub async fn fetch_events(&self) -> Result<EventList, Box<dyn std::error::Error>> {
-        let events_url = [self.base_url, EVENTS_PATH].join("");
+        let events_url = match self.dates {
+            DateSelect::All => [self.base_url, EVENTS_PATH].join(""),
+            DateSelect::NotPast => [self.base_url, EVENTS_PATH, "&filterEvents=notpast"].join(""),
+        };
+
         info!(url=%events_url, "Fetching event list page");
         let events_page = Page::from_url(&self.client, &events_url).await?;
         let events = EventList::try_from((self.base_url, events_page))?;
-
-        let events = match self.min_date {
-            None => events,
-            Some(min_date) => events
-                .into_iter()
-                .filter(|event| event.end_date > min_date)
-                .collect(),
-        };
 
         Ok(events)
     }
