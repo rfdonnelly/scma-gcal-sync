@@ -65,3 +65,9 @@ pub enum DateSelect {
     /// Only present (in-progress) and future events
     NotPast,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    pub name: String,
+    pub email: String,
+}

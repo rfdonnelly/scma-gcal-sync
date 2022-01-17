@@ -1,4 +1,4 @@
-use crate::model::{Attendee, Comment, DateSelect, Event};
+use crate::model::{Attendee, Comment, DateSelect, Event, User};
 
 use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
@@ -8,6 +8,7 @@ use tap::prelude::*;
 use tracing::info;
 
 use std::convert::TryFrom;
+use std::collections::HashMap;
 
 const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
 const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
@@ -264,6 +265,61 @@ impl IntoIterator for EventList {
 impl FromIterator<Event> for EventList {
     fn from_iter<I: IntoIterator<Item = Event>>(iter: I) -> Self {
         Self(Vec::from_iter(iter))
+    }
+}
+
+#[derive(Serialize)]
+pub struct Roster(Vec<User>);
+
+impl TryFrom<Page> for Roster {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
+        let mut addy_emails: HashMap<String, String> = HashMap::new();
+        let mut id_addys: HashMap<String, String> = HashMap::new();
+
+        let mut lines = page.as_ref().lines();
+        while let Some(line) = lines.next() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("var addy") {
+                let (left_assign, right_assign) = trimmed.split_once("= '").unwrap();
+                let (_, addy) = left_assign.split_once(" ").unwrap();
+                let (email, _) = right_assign.split_once("';").unwrap();
+                let email = email.replace("'+ '", "");
+                let email = email.replace("' + '", "");
+                let email = email.replace("' +'", "");
+                let email = html_escape::decode_html_entities(&email);
+                addy_emails.insert(addy.to_string(), email.to_string());
+            } else if trimmed.starts_with("$('#cbMa") {
+                let (_, right) = trimmed.split_once("$('#").unwrap();
+                let (id, _) = right.split_once("')").unwrap();
+
+                let (_, right) = right.split_once(":' + ").unwrap();
+                let (addy, _) = right.split_once(' ').unwrap();
+                id_addys.insert(id.to_string(), addy.to_string());
+            } else if trimmed.contains("cbUserURLs") {
+                break;
+            }
+        }
+
+        let document = Document::from(page.as_ref());
+        let table = document.find(Name("table")).next().unwrap();
+        let names = table
+            .find(Class("cbUserListFC_formatname"))
+            .map(|node| node.text());
+        let email_ids = table
+            .find(Class("cbMailRepl"))
+            .map(|node| node.attr("id").unwrap());
+        let members = names
+            .zip(email_ids)
+            .map(|(name, email_id)| {
+                let addy = id_addys.get(email_id).unwrap();
+                let email = addy_emails.get(addy).unwrap();
+                User { name, email: email.clone() }
+            })
+            .collect();
+
+        Ok(Roster(members))
     }
 }
 
