@@ -12,6 +12,7 @@ use std::collections::HashMap;
 
 const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
 const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
+const USERS_PATH: &str = "/index.php?option=com_comprofiler&task=usersList&listid=5";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
@@ -110,6 +111,16 @@ impl<'a> Web<'a> {
         let timestamp = Utc::now();
         let event = Event::try_from((event, event_page, timestamp))?;
         Ok(event)
+    }
+
+    pub async fn fetch_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error>> {
+        let url = [self.base_url, USERS_PATH].join("");
+
+        info!(url=%url, "Fetching users");
+        let page = Page::from_url(&self.client, &url).await?;
+        let users = Users::try_from(page)?;
+
+        Ok(users.0)
     }
 }
 
@@ -269,9 +280,9 @@ impl FromIterator<Event> for EventList {
 }
 
 #[derive(Serialize)]
-pub struct Roster(Vec<User>);
+pub struct Users(Vec<User>);
 
-impl TryFrom<Page> for Roster {
+impl TryFrom<Page> for Users {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
@@ -380,7 +391,7 @@ impl TryFrom<Page> for Roster {
             })
             .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
 
-        Ok(Roster(members))
+        Ok(Users(members))
     }
 }
 
