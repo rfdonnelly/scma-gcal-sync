@@ -303,21 +303,82 @@ impl TryFrom<Page> for Roster {
         }
 
         let document = Document::from(page.as_ref());
-        let table = document.find(Name("table")).next().unwrap();
-        let names = table
-            .find(Class("cbUserListFC_formatname"))
-            .map(|node| node.text());
-        let email_ids = table
-            .find(Class("cbMailRepl"))
-            .map(|node| node.attr("id").unwrap());
-        let members = names
-            .zip(email_ids)
-            .map(|(name, email_id)| {
-                let addy = id_addys.get(email_id).unwrap();
-                let email = addy_emails.get(addy).unwrap();
-                User { name, email: email.clone() }
+        let tbody = document.find(Name("tbody")).next().unwrap();
+        let members = tbody
+            .find(Name("tr"))
+            .map(|tr| {
+                let name = tr
+                    .find(Class("cbUserListFC_formatname"))
+                    .map(|node| node.text())
+                    .next()
+                    .unwrap_or("UNDEFINED".to_string());
+                let member_status = tr
+                    .find(Class("cbUserListFC_cb_memberstatus"))
+                    .next()
+                    .unwrap()
+                    .text()
+                    .parse()?;
+                let trip_leader_status =
+                    match tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
+                        Some(node) => Some(node.text().parse()?),
+                        None => None,
+                    };
+                let position =
+                    match tr.find(Class("cbUserListFC_cb_position")).next() {
+                        Some(node) => Some(node.text().parse()?),
+                        None => None,
+                    };
+                let address = tr
+                    .find(Class("cbUserListFC_cb_address"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let city = tr
+                    .find(Class("cbUserListFC_cb_city"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let state = tr
+                    .find(Class("cbUserListFC_cb_state"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let zipcode = tr
+                    .find(Class("cbUserListFC_cb_zipcode"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let phone = tr
+                    .find(Class("cbUserListFC_cb_phone"))
+                    .next()
+                    .map(|node| node.text());
+                let email_id = tr
+                    .find(Class("cbMailRepl"))
+                    .next()
+                    .unwrap()
+                    .attr("id")
+                    .unwrap();
+                let undefined = "UNDEFINED".to_string();
+                let addy = id_addys.get(email_id).unwrap_or(&undefined);
+                let email = addy_emails.get(addy).unwrap_or(&undefined);
+                let email = email.to_string();
+
+                let user = User {
+                    name,
+                    member_status,
+                    trip_leader_status,
+                    position,
+                    address,
+                    city,
+                    state,
+                    zipcode,
+                    phone,
+                    email,
+                };
+
+                Ok(user)
             })
-            .collect();
+            .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
 
         Ok(Roster(members))
     }
