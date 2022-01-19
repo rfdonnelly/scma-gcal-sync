@@ -9,6 +9,7 @@ use output::GCal;
 use clap::{AppSettings, ArgEnum, Parser};
 use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const CONCURRENT_REQUESTS: usize = 3;
@@ -106,6 +107,7 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
+        .with_env_filter(EnvFilter::from_default_env())
         .init();
 
     let args = Args::parse();
