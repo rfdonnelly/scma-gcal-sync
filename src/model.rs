@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize, Serializer};
 
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
@@ -64,4 +65,62 @@ pub enum DateSelect {
     All,
     /// Only present (in-progress) and future events
     NotPast,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum MemberStatus {
+    Applicant,
+    Student,
+    AM,
+    HM,
+    RM,
+}
+
+impl FromStr for MemberStatus {
+    type Err = Box<dyn std::error::Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Applicant" => Ok(Self::Applicant),
+            "Student" => Ok(Self::Student),
+            "AM" => Ok(Self::AM),
+            "HM" => Ok(Self::HM),
+            "RM" => Ok(Self::RM),
+            _ => Err(format!("unrecognized member status '{}'", s).into()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum TripLeaderStatus {
+    G,
+    S1,
+    S2,
+}
+
+impl FromStr for TripLeaderStatus {
+    type Err = Box<dyn std::error::Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "G" => Ok(Self::G),
+            "S1" => Ok(Self::S1),
+            "S2" => Ok(Self::S2),
+            _ => Err(format!("unrecognized trip leader status '{}'", s).into()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    pub name: String,
+    pub member_status: MemberStatus,
+    pub trip_leader_status: Option<TripLeaderStatus>,
+    pub position: Option<String>,
+    pub address: String,
+    pub city: String,
+    pub state: String,
+    pub zipcode: String,
+    pub phone: Option<String>,
+    pub email: String,
 }

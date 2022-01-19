@@ -14,6 +14,12 @@ const BASE_URL: &str = "https://www.rockclimbing.org";
 const CONCURRENT_REQUESTS: usize = 3;
 
 #[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+enum DataType {
+    Events,
+    Users,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
 enum InputType {
     Web,
     Yaml,
@@ -53,6 +59,10 @@ struct Args {
     /// applicable to the web input.
     #[clap(long)]
     all: bool,
+
+    /// The data type to operate on.
+    #[clap(arg_enum, short, long, default_value = "events")]
+    data: DataType,
 
     #[clap(arg_enum, short, long, default_value = "web")]
     input: InputType,
@@ -100,6 +110,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
+    match args.data {
+        DataType::Events => process_events(args).await,
+        DataType::Users => process_users(args).await,
+    }
+}
+
+async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let dates = if args.all {
         DateSelect::All
     } else {
@@ -162,6 +179,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         PipeFile::File(_) => todo!(),
                     }
                 }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    let users = match args.input {
+        InputType::Web => {
+            Web::new(
+                &args.username,
+                &args.password,
+                BASE_URL,
+                DateSelect::NotPast,
+            )
+            .await?
+            .fetch_users()
+            .await?
+        }
+        InputType::Yaml => {
+            info!(input=?args.input_file, "Reading users");
+            let users_yaml = match args.input_file {
+                PipeFile::Pipe => todo!(),
+                PipeFile::File(path) => std::fs::read_to_string(&path)?,
+            };
+            serde_yaml::from_str(&users_yaml)?
+        }
+    };
+
+    match args.output {
+        OutputType::GCal => todo!(),
+        OutputType::Yaml => {
+            info!(output=?args.output_file, "Writing users");
+            match args.output_file {
+                PipeFile::Pipe => println!("{}", serde_yaml::to_string(&users)?),
+                PipeFile::File(_) => todo!(),
             }
         }
     }

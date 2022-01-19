@@ -1,0 +1,37 @@
+---
+source: src/input/web.rs
+assertion_line: 455
+expression: users
+
+---
+- name: John Doe
+  member_status: RM
+  trip_leader_status: S1
+  position: ~
+  address: 1234 Example Dr
+  city: A City
+  state: CA
+  zipcode: "55555"
+  phone: 555-555-5555
+  email: johndoe@gmail.com
+- name: Jane Doe
+  member_status: HM
+  trip_leader_status: S2
+  position: Director
+  address: 6789 Example St
+  city: Los Angeles
+  state: CA
+  zipcode: "55555"
+  phone: "1234567890"
+  email: jane.doe@gmail.com
+- name: First Last
+  member_status: Student
+  trip_leader_status: ~
+  position: ~
+  address: 4321 Example Ct
+  city: Another City
+  state: CA
+  zipcode: "55553"
+  phone: (555) 555-5554
+  email: first.last@gmail.com
+

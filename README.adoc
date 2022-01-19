@@ -39,19 +39,37 @@ Default path is `token.json`.
 
 == Examples
 
-=== Web to YAML
+=== Events
 
-Fetches events from the SCMA website and converts them to YAML.
+The following examples operate on events.
+
+==== Web to YAML
+
+Fetch events from the SCMA website and converts them to YAML.
 
  scma-gcal-sync -u <scma-username> -p <scma-password> -o yaml > events.yml
 
-=== YAML to GCal
+==== YAML to GCal
+
+Read events from a YAML file and sync them to Google Calendar.
 
  scma-gcal-sync -i yaml --ifile events.yml
 
-=== Web to GCAL
+==== Web to GCAL
+
+Fetch events from the SCMA website and sync them to Google Calendar.
 
  scma-gcal-sync -u <scma-username> -p <scma-password>
+
+=== Users
+
+The following examples operate on users.
+
+==== Web to YAML
+
+Fetch users from the SCMA website and converts them to YAML.
+
+ scma-gcal-sync -u <scma-username> -p <scma-password> -d users -o yaml > users.yml
 
 == Limitations
 

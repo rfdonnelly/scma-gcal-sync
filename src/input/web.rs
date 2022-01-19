@@ -1,4 +1,4 @@
-use crate::model::{Attendee, Comment, DateSelect, Event};
+use crate::model::{Attendee, Comment, DateSelect, Event, User};
 
 use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
@@ -7,10 +7,12 @@ use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
 const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
+const USERS_PATH: &str = "/index.php?option=com_comprofiler&task=usersList&listid=5";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web<'a> {
@@ -109,6 +111,16 @@ impl<'a> Web<'a> {
         let timestamp = Utc::now();
         let event = Event::try_from((event, event_page, timestamp))?;
         Ok(event)
+    }
+
+    pub async fn fetch_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error>> {
+        let url = [self.base_url, USERS_PATH].join("");
+
+        info!(url=%url, "Fetching users");
+        let page = Page::from_url(&self.client, &url).await?;
+        let users = Users::try_from(page)?;
+
+        Ok(users.0)
     }
 }
 
@@ -267,6 +279,120 @@ impl FromIterator<Event> for EventList {
     }
 }
 
+#[derive(Serialize)]
+pub struct Users(Vec<User>);
+
+impl TryFrom<Page> for Users {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
+        let mut addy_emails: HashMap<String, String> = HashMap::new();
+        let mut id_addys: HashMap<String, String> = HashMap::new();
+
+        for line in page.as_ref().lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("var addy") {
+                let (left_assign, right_assign) = trimmed.split_once("= '").unwrap();
+                let (_, addy) = left_assign.split_once(' ').unwrap();
+                let (email, _) = right_assign.split_once("';").unwrap();
+                let email = email.replace("'+ '", "");
+                let email = email.replace("' + '", "");
+                let email = email.replace("' +'", "");
+                let email = html_escape::decode_html_entities(&email);
+                addy_emails.insert(addy.to_string(), email.to_string());
+            } else if trimmed.starts_with("$('#cbMa") {
+                let (_, right) = trimmed.split_once("$('#").unwrap();
+                let (id, _) = right.split_once("')").unwrap();
+
+                let (_, right) = right.split_once(":' + ").unwrap();
+                let (addy, _) = right.split_once(' ').unwrap();
+                id_addys.insert(id.to_string(), addy.to_string());
+            } else if trimmed.contains("cbUserURLs") {
+                break;
+            }
+        }
+
+        let document = Document::from(page.as_ref());
+        let tbody = document.find(Name("tbody")).next().unwrap();
+        let members = tbody
+            .find(Name("tr"))
+            .map(|tr| {
+                let name = tr
+                    .find(Class("cbUserListFC_formatname"))
+                    .map(|node| node.text())
+                    .next()
+                    .unwrap_or_else(|| "UNDEFINED".to_string());
+                let member_status = tr
+                    .find(Class("cbUserListFC_cb_memberstatus"))
+                    .next()
+                    .unwrap()
+                    .text()
+                    .parse()?;
+                let trip_leader_status =
+                    match tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
+                        Some(node) => Some(node.text().parse()?),
+                        None => None,
+                    };
+                let position = match tr.find(Class("cbUserListFC_cb_position")).next() {
+                    Some(node) => Some(node.text().parse()?),
+                    None => None,
+                };
+                let address = tr
+                    .find(Class("cbUserListFC_cb_address"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let city = tr
+                    .find(Class("cbUserListFC_cb_city"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let state = tr
+                    .find(Class("cbUserListFC_cb_state"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let zipcode = tr
+                    .find(Class("cbUserListFC_cb_zipcode"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let phone = tr
+                    .find(Class("cbUserListFC_cb_phone"))
+                    .next()
+                    .map(|node| node.text());
+                let email_id = tr
+                    .find(Class("cbMailRepl"))
+                    .next()
+                    .unwrap()
+                    .attr("id")
+                    .unwrap();
+                let undefined = "UNDEFINED".to_string();
+                let addy = id_addys.get(email_id).unwrap_or(&undefined);
+                let email = addy_emails.get(addy).unwrap_or(&undefined);
+                let email = email.to_string();
+
+                let user = User {
+                    name,
+                    member_status,
+                    trip_leader_status,
+                    position,
+                    address,
+                    city,
+                    state,
+                    zipcode,
+                    phone,
+                    email,
+                };
+
+                Ok(user)
+            })
+            .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
+
+        Ok(Users(members))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -317,5 +443,13 @@ mod test {
         let base_url = "https://www.rockclimbing.org";
         let events = EventList::try_from((base_url, page)).unwrap();
         insta::assert_yaml_snapshot!(events);
+    }
+
+    #[test]
+    fn parse_users() {
+        let path = path_to_input("users.html");
+        let page = Page::from_file(path).unwrap();
+        let users = Users::try_from(page).unwrap();
+        insta::assert_yaml_snapshot!(users);
     }
 }
