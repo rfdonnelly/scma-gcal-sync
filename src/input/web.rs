@@ -446,4 +446,12 @@ mod test {
         let events = EventList::try_from((base_url, page)).unwrap();
         insta::assert_yaml_snapshot!(events);
     }
+
+    #[test]
+    fn parse_users() {
+        let path = path_to_input("users.html");
+        let page = Page::from_file(path).unwrap();
+        let users = Users::try_from(page).unwrap();
+        insta::assert_yaml_snapshot!(users);
+    }
 }
