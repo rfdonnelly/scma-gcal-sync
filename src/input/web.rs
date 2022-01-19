@@ -289,12 +289,11 @@ impl TryFrom<Page> for Users {
         let mut addy_emails: HashMap<String, String> = HashMap::new();
         let mut id_addys: HashMap<String, String> = HashMap::new();
 
-        let mut lines = page.as_ref().lines();
-        while let Some(line) = lines.next() {
+        for line in page.as_ref().lines() {
             let trimmed = line.trim_start();
             if trimmed.starts_with("var addy") {
                 let (left_assign, right_assign) = trimmed.split_once("= '").unwrap();
-                let (_, addy) = left_assign.split_once(" ").unwrap();
+                let (_, addy) = left_assign.split_once(' ').unwrap();
                 let (email, _) = right_assign.split_once("';").unwrap();
                 let email = email.replace("'+ '", "");
                 let email = email.replace("' + '", "");
@@ -322,7 +321,7 @@ impl TryFrom<Page> for Users {
                     .find(Class("cbUserListFC_formatname"))
                     .map(|node| node.text())
                     .next()
-                    .unwrap_or("UNDEFINED".to_string());
+                    .unwrap_or_else(|| "UNDEFINED".to_string());
                 let member_status = tr
                     .find(Class("cbUserListFC_cb_memberstatus"))
                     .next()
