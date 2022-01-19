@@ -25,11 +25,10 @@ impl GCal {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
 
-        info!("Listing calendars");
+        info!(%calendar_name, "Finding calendar");
         let (_, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
         let calendars = list.items.unwrap();
 
-        info!(%calendar_name, "Finding calendar");
         let calender_entry = calendars
             .iter()
             .find(|entry| entry.summary.as_ref().unwrap() == calendar_name)
@@ -48,7 +47,7 @@ impl GCal {
     ) -> Result<CalendarHub, Box<dyn std::error::Error>> {
         let secret = yup_oauth2::read_application_secret(client_secret_json_path).await?;
 
-        info!("Authenticating");
+        info!(oauth_client_id=?secret.client_id, "Authenticating");
         let auth =
             InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
                 .persist_tokens_to_disk(oauth_token_json_path)
