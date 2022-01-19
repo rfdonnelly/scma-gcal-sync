@@ -189,10 +189,15 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let users = match args.input {
         InputType::Web => {
-            Web::new(&args.username, &args.password, BASE_URL, DateSelect::NotPast)
-                .await?
-                .fetch_users()
-                .await?
+            Web::new(
+                &args.username,
+                &args.password,
+                BASE_URL,
+                DateSelect::NotPast,
+            )
+            .await?
+            .fetch_users()
+            .await?
         }
         InputType::Yaml => {
             info!(input=?args.input_file, "Reading users");

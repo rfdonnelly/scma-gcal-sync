@@ -7,8 +7,8 @@ use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
 
-use std::convert::TryFrom;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
 const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
@@ -334,11 +334,10 @@ impl TryFrom<Page> for Users {
                         Some(node) => Some(node.text().parse()?),
                         None => None,
                     };
-                let position =
-                    match tr.find(Class("cbUserListFC_cb_position")).next() {
-                        Some(node) => Some(node.text().parse()?),
-                        None => None,
-                    };
+                let position = match tr.find(Class("cbUserListFC_cb_position")).next() {
+                    Some(node) => Some(node.text().parse()?),
+                    None => None,
+                };
                 let address = tr
                     .find(Class("cbUserListFC_cb_address"))
                     .next()
