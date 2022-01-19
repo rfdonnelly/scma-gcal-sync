@@ -15,6 +15,7 @@ pub struct GCal {
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
+const SCOPE: google_calendar3::api::Scope = google_calendar3::api::Scope::Full;
 
 impl GCal {
     pub async fn new(
@@ -25,7 +26,7 @@ impl GCal {
         let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
 
         info!("Listing calendars");
-        let (_, list) = hub.calendar_list().list().doit().await?;
+        let (_, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
         let calendars = list.items.unwrap();
 
         info!(%calendar_name, "Finding calendar");
@@ -53,6 +54,10 @@ impl GCal {
                 .persist_tokens_to_disk(oauth_token_json_path)
                 .build()
                 .await?;
+
+        let scopes = [SCOPE];
+        let token = auth.token(&scopes).await?;
+        info!(expiration_time=?token.expiration_time(), "Got token");
 
         let client =
             hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
@@ -84,6 +89,7 @@ impl GCal {
                 .hub
                 .events()
                 .patch(cal_event.clone(), &self.calendar_id, &event_id)
+                .add_scope(SCOPE)
                 .doit()
                 .await;
             match result {
@@ -92,6 +98,7 @@ impl GCal {
                         .hub
                         .events()
                         .insert(cal_event, &self.calendar_id)
+                        .add_scope(SCOPE)
                         .doit()
                         .await?;
                     let link = rsp.1.html_link.as_ref().unwrap();
