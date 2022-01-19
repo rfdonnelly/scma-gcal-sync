@@ -2,7 +2,7 @@ use crate::model::Event;
 
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
-use google_calendar3::{api::Event as CalEvent, api::EventDateTime, CalendarHub};
+use google_calendar3::{api, CalendarHub};
 use tracing::info;
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
@@ -80,14 +80,14 @@ impl GCal {
         &self,
         event: &Event,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let cal_event = CalEvent::try_from(event)?;
+        let g_event = api::Event::try_from(event)?;
 
         let _rsp = {
-            let event_id = cal_event.id.as_ref().unwrap().clone();
+            let event_id = g_event.id.as_ref().unwrap().clone();
             let result = self
                 .hub
                 .events()
-                .patch(cal_event.clone(), &self.calendar_id, &event_id)
+                .patch(g_event.clone(), &self.calendar_id, &event_id)
                 .add_scope(SCOPE)
                 .doit()
                 .await;
@@ -96,7 +96,7 @@ impl GCal {
                     let rsp = self
                         .hub
                         .events()
-                        .insert(cal_event, &self.calendar_id)
+                        .insert(g_event, &self.calendar_id)
                         .add_scope(SCOPE)
                         .doit()
                         .await?;
@@ -116,7 +116,7 @@ impl GCal {
     }
 }
 
-impl TryFrom<&Event> for CalEvent {
+impl TryFrom<&Event> for api::Event {
     type Error = Box<dyn ::std::error::Error>;
 
     fn try_from(event: &Event) -> Result<Self, Self::Error> {
@@ -127,7 +127,7 @@ impl TryFrom<&Event> for CalEvent {
         let description = event_description(event)?;
         let location = event.location.clone();
 
-        let cal_event = CalEvent {
+        let g_event = api::Event {
             id: Some(id),
             summary: Some(summary),
             start: Some(start),
@@ -137,7 +137,7 @@ impl TryFrom<&Event> for CalEvent {
             ..Default::default()
         };
 
-        Ok(cal_event)
+        Ok(g_event)
     }
 }
 
@@ -151,14 +151,14 @@ fn event_summary(event: &Event) -> String {
     format!("SCMA: {}", event.title)
 }
 
-fn event_start(event: &Event) -> EventDateTime {
-    EventDateTime {
+fn event_start(event: &Event) -> api::EventDateTime {
+    api::EventDateTime {
         date: Some(event.start_date.to_string()),
         ..Default::default()
     }
 }
 
-fn event_end(event: &Event) -> EventDateTime {
+fn event_end(event: &Event) -> api::EventDateTime {
     // WORKAROUND: Google Calendar seems to require all-day-multi-day events to end on the day
     // after.  Otherwise they show as 1 day short.
     let end_date = if event.start_date == event.end_date {
@@ -167,7 +167,7 @@ fn event_end(event: &Event) -> EventDateTime {
         event.end_date + Duration::days(1)
     };
 
-    EventDateTime {
+    api::EventDateTime {
         date: Some(end_date.to_string()),
         ..Default::default()
     }
