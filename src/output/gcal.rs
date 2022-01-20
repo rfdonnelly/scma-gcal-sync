@@ -22,6 +22,9 @@ pub enum AclSyncOp {
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
+/// The number of concurrent ACL insert/delete requests to make.  Experienced rate limiting with a
+/// value of 3.
+const CONCURRENT_REQUESTS_ACL: usize = 1;
 const SCOPE: api::Scope = api::Scope::Full;
 
 impl GCal {
@@ -74,13 +77,21 @@ impl GCal {
     // Syncs emails with readers in calendar ACL
     pub async fn acl_sync(&self, emails: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
         let acls = self.acl_list().await?;
-        let diffs = Self::acl_sync_ops(emails, &acls);
+        let ops = Self::acl_sync_ops(emails, &acls);
 
-        for diff in diffs {
-            match diff {
-                AclSyncOp::Insert(email) => self.acl_insert(&email, "reader").await?,
-                AclSyncOp::Delete(email) => self.acl_delete(&email).await?,
-            }
+        stream::iter(ops)
+            .map(|op| self.acl_insert_or_delete(op))
+            .buffer_unordered(CONCURRENT_REQUESTS_ACL)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(())
+    }
+
+    async fn acl_insert_or_delete(&self, op: AclSyncOp) -> Result<(), Box<dyn std::error::Error>> {
+        match op {
+            AclSyncOp::Insert(email) => self.acl_insert(&email, "reader").await?,
+            AclSyncOp::Delete(email) => self.acl_delete(&email).await?,
         }
 
         Ok(())
