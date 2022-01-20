@@ -7,6 +7,7 @@ use tracing::{debug, info, trace};
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 use std::fmt::Write;
+use std::collections::HashSet;
 
 pub struct GCal {
     calendar_id: String,
@@ -62,6 +63,73 @@ impl GCal {
         let gcal = Self { calendar_id, hub };
 
         Ok(gcal)
+    }
+
+    // Syncs emails with readers in calendar ACL
+    pub async fn acl_sync(
+        &self,
+        emails: &[&str],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let readers: HashSet<String> = self.acl_list().await?
+            .iter()
+            .filter(|rule| rule.role == Some("reader".to_string()))
+            .map(|rule| rule.scope.as_ref().unwrap().value.as_ref().unwrap().to_string())
+            .collect();
+        let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
+
+        let to_add = emails.difference(&readers);
+        let to_del = readers.difference(&emails);
+
+        for email in to_add {
+            self.acl_insert(email, "reader").await?;
+        }
+        for email in to_del {
+            self.acl_delete(email).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn acl_insert(
+        &self,
+        email: &str,
+        role: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!(%email, "Adding user");
+
+        let req = api::AclRule {
+            role: Some(role.to_string()),
+            scope: Some(api::AclRuleScope {
+                type_: Some("user".to_string()),
+                value: Some(email.to_string()),
+            }),
+            ..Default::default()
+        };
+        let (rsp, rule) = self.hub.acl()
+            .insert(req, &self.calendar_id)
+            .send_notifications(true)
+            .doit()
+            .await?;
+        trace!(?rsp);
+        debug!(?rule);
+
+        Ok(())
+    }
+
+    async fn acl_delete(
+        &self,
+        email: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!(%email, "Deleting user");
+
+        let rule_id = format!("user:{}", email);
+        let rsp = self.hub.acl()
+            .delete(&self.calendar_id, &rule_id)
+            .doit()
+            .await?;
+        trace!(?rsp);
+
+        Ok(())
     }
 
     /// Fetches entire ACL using one or more requests for pagination
