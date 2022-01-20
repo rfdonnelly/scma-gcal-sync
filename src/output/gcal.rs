@@ -151,7 +151,7 @@ impl GCal {
         Ok(())
     }
 
-    /// Fetches entire ACL using one or more requests for pagination
+    /// Fetches entire ACL by fetching all pages of the ACL
     async fn acl_list(
         &self,
     ) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
