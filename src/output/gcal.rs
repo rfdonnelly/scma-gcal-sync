@@ -63,8 +63,8 @@ impl GCal {
                     ..Default::default()
                 };
                 let (rsp, calendar) = hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
-                trace!(?rsp);
-                debug!(?calendar);
+                trace!(?rsp, "calendars.insert");
+                debug!(?calendar, "calendars.insert");
 
                 let calendar_id = calendar.id.as_ref().unwrap().clone();
                 info!(%calendar_name, %calendar_id, "Inserted new calendar");
@@ -169,8 +169,8 @@ impl GCal {
             .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
             .doit()
             .await?;
-        trace!(?rsp);
-        debug!(?rule);
+        trace!(?rsp, "acl.insert");
+        debug!(?rule, "acl.insert");
 
         Ok(())
     }
@@ -185,7 +185,7 @@ impl GCal {
             .delete(&self.calendar_id, &rule_id)
             .doit()
             .await?;
-        trace!(?rsp);
+        trace!(?rsp, "acl.delete");
 
         Ok(())
     }
@@ -219,8 +219,8 @@ impl GCal {
             None => call,
         };
         let (rsp, acl) = call.doit().await?;
-        trace!(?rsp);
-        debug!(?acl);
+        trace!(?rsp, "acl.list");
+        debug!(?acl, "acl.list");
 
         Ok((acl.items.unwrap(), acl.next_page_token))
     }
@@ -275,6 +275,14 @@ impl GCal {
             .doit()
             .await;
         match result {
+            Ok(rsp) => {
+                let (rsp, g_event) = rsp;
+                trace!(?rsp, "events.patch");
+                debug!(?g_event, "events.patch");
+
+                let link = g_event.html_link.as_ref().unwrap();
+                info!(%event.id, %event, %link, "Updated");
+            }
             Err(_) => {
                 let (rsp, g_event) = self
                     .hub
@@ -283,19 +291,11 @@ impl GCal {
                     .add_scope(SCOPE)
                     .doit()
                     .await?;
-                trace!(?rsp);
-                debug!(?g_event);
+                trace!(?rsp, "events.insert");
+                debug!(?g_event, "events.insert");
 
                 let link = g_event.html_link.as_ref().unwrap();
                 info!(%event.id, %event, %link, "Inserted");
-            }
-            Ok(rsp) => {
-                let (rsp, g_event) = rsp;
-                trace!(?rsp);
-                debug!(?g_event);
-
-                let link = g_event.html_link.as_ref().unwrap();
-                info!(%event.id, %event, %link, "Updated");
             }
         }
 
