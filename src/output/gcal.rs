@@ -3,7 +3,7 @@ use crate::model::Event;
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api, CalendarHub};
-use tracing::info;
+use tracing::{debug, info, trace};
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 use std::fmt::Write;
@@ -26,10 +26,12 @@ impl GCal {
         let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
 
         info!(%calendar_name, "Finding calendar");
-        let (_, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
+        let (rsp, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
+        trace!(?rsp, "calendar_list.list");
+        debug!(?list, "calendar_list.list");
         let calendars = list.items.unwrap();
 
-        let calender_entry = calendars
+        let find_calendar = calendars
             .iter()
             .find(|entry| entry.summary.as_ref().unwrap() == calendar_name)
             .unwrap();
@@ -82,35 +84,38 @@ impl GCal {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let g_event = api::Event::try_from(event)?;
 
-        let _rsp = {
-            let event_id = g_event.id.as_ref().unwrap().clone();
-            let result = self
-                .hub
-                .events()
-                .patch(g_event.clone(), &self.calendar_id, &event_id)
-                .add_scope(SCOPE)
-                .doit()
-                .await;
-            match result {
-                Err(_) => {
-                    let rsp = self
-                        .hub
-                        .events()
-                        .insert(g_event, &self.calendar_id)
-                        .add_scope(SCOPE)
-                        .doit()
-                        .await?;
-                    let link = rsp.1.html_link.as_ref().unwrap();
-                    info!(%event.id, %event, %link, "Inserted");
-                    rsp
-                }
-                Ok(rsp) => {
-                    let link = rsp.1.html_link.as_ref().unwrap();
-                    info!(%event.id, %event, %link, "Updated");
-                    rsp
-                }
+        let event_id = g_event.id.as_ref().unwrap().clone();
+        let result = self
+            .hub
+            .events()
+            .patch(g_event.clone(), &self.calendar_id, &event_id)
+            .add_scope(SCOPE)
+            .doit()
+            .await;
+        match result {
+            Err(_) => {
+                let (rsp, g_event) = self
+                    .hub
+                    .events()
+                    .insert(g_event, &self.calendar_id)
+                    .add_scope(SCOPE)
+                    .doit()
+                    .await?;
+                trace!(?rsp);
+                debug!(?g_event);
+
+                let link = g_event.html_link.as_ref().unwrap();
+                info!(%event.id, %event, %link, "Inserted");
             }
-        };
+            Ok(rsp) => {
+                let (rsp, g_event) = rsp;
+                trace!(?rsp);
+                debug!(?g_event);
+
+                let link = g_event.html_link.as_ref().unwrap();
+                info!(%event.id, %event, %link, "Updated");
+            }
+        }
 
         Ok(())
     }
