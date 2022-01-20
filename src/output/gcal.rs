@@ -33,10 +33,31 @@ impl GCal {
 
         let find_calendar = calendars
             .iter()
-            .find(|entry| entry.summary.as_ref().unwrap() == calendar_name)
-            .unwrap();
-        let calendar_id = calender_entry.id.as_ref().unwrap().clone();
-        info!(%calendar_id, "Found calendar");
+            .find(|entry| entry.summary.as_ref().unwrap() == calendar_name);
+        let calendar_id = match find_calendar {
+            Some(calendar) => {
+                let calendar_id = calendar.id.as_ref().unwrap().clone();
+                info!(%calendar_name, %calendar_id, "Found existing calendar");
+
+                calendar_id
+            }
+            None => {
+                info!(%calendar_name, "Calendar not found, inserting new calendar");
+
+                let req = api::Calendar {
+                    summary: Some(calendar_name.to_string()),
+                    ..Default::default()
+                };
+                let (rsp, calendar) = hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
+                trace!(?rsp);
+                debug!(?calendar);
+
+                let calendar_id = calendar.id.as_ref().unwrap().clone();
+                info!(%calendar_name, %calendar_id, "Inserted new calendar");
+
+                calendar_id
+            }
+        };
 
         let gcal = Self { calendar_id, hub };
 
