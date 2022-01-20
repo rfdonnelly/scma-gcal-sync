@@ -6,8 +6,8 @@ use google_calendar3::{api, CalendarHub};
 use tracing::{debug, info, trace};
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
-use std::fmt::Write;
 use std::collections::HashSet;
+use std::fmt::Write;
 
 pub struct GCal {
     calendar_id: String,
@@ -15,9 +15,9 @@ pub struct GCal {
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub enum UserDiff {
-    Add(String),
-    Del(String),
+pub enum AclSyncOp {
+    Insert(String),
+    Delete(String),
 }
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
@@ -72,48 +72,71 @@ impl GCal {
     }
 
     // Syncs emails with readers in calendar ACL
-    pub async fn acl_sync(
-        &self,
-        emails: &[&str],
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn acl_sync(&self, emails: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
         let acls = self.acl_list().await?;
-        let diffs = Self::acl_diff(emails, &acls);
+        let diffs = Self::acl_sync_ops(emails, &acls);
 
         for diff in diffs {
             match diff {
-                UserDiff::Add(email) => self.acl_insert(&email, "reader").await?,
-                UserDiff::Del(email) => self.acl_delete(&email).await?,
+                AclSyncOp::Insert(email) => self.acl_insert(&email, "reader").await?,
+                AclSyncOp::Delete(email) => self.acl_delete(&email).await?,
             }
         }
 
         Ok(())
     }
 
-    /// Returns a diff between emails and readers (ACL rules with the reader role).
-    pub fn acl_diff(
-        emails: &[&str],
-        rules: &[api::AclRule],
-    ) -> Vec<UserDiff> {
+    /// Returns a list of operations that need to be performed on the ACL to bring the ACL in sync
+    /// with a set of user emails.
+    ///
+    /// Operates on the "reader" role only.
+    ///
+    /// This effectively performs a diff from readers to emails.
+    ///
+    /// For example, if given the set of emails:
+    ///
+    /// * user0@example.com
+    /// * user1@example.com
+    ///
+    /// And the set of readers:
+    ///
+    /// * user1@example.com
+    /// * user2@example.com
+    ///
+    /// To bring the readers in sync with the emails, the following operations would need to be
+    /// performed on the readers:
+    ///
+    /// * Insert user0@example.com
+    /// * Delete user2@example.com
+    pub fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> Vec<AclSyncOp> {
         let readers: HashSet<String> = rules
             .iter()
             .filter(|rule| rule.role == Some("reader".to_string()))
-            .map(|rule| rule.scope.as_ref().unwrap().value.as_ref().unwrap().to_string())
+            .map(|rule| {
+                rule.scope
+                    .as_ref()
+                    .unwrap()
+                    .value
+                    .as_ref()
+                    .unwrap()
+                    .to_string()
+            })
             .collect();
         let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
 
-        let to_add = emails.difference(&readers).map(|email| UserDiff::Add(email.to_string()));
-        let to_del = readers.difference(&emails).map(|email| UserDiff::Del(email.to_string()));
-        let diffs: Vec<UserDiff> = to_add.chain(to_del).collect();
+        let to_add = emails
+            .difference(&readers)
+            .map(|email| AclSyncOp::Insert(email.to_string()));
+        let to_del = readers
+            .difference(&emails)
+            .map(|email| AclSyncOp::Delete(email.to_string()));
+        let diffs: Vec<AclSyncOp> = to_add.chain(to_del).collect();
         info!(?diffs);
 
         diffs
     }
 
-    async fn acl_insert(
-        &self,
-        email: &str,
-        role: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn acl_insert(&self, email: &str, role: &str) -> Result<(), Box<dyn std::error::Error>> {
         info!(%email, "Adding user");
 
         let req = api::AclRule {
@@ -124,7 +147,9 @@ impl GCal {
             }),
             ..Default::default()
         };
-        let (rsp, rule) = self.hub.acl()
+        let (rsp, rule) = self
+            .hub
+            .acl()
             .insert(req, &self.calendar_id)
             .send_notifications(true)
             .doit()
@@ -135,14 +160,13 @@ impl GCal {
         Ok(())
     }
 
-    async fn acl_delete(
-        &self,
-        email: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn acl_delete(&self, email: &str) -> Result<(), Box<dyn std::error::Error>> {
         info!(%email, "Deleting user");
 
         let rule_id = format!("user:{}", email);
-        let rsp = self.hub.acl()
+        let rsp = self
+            .hub
+            .acl()
             .delete(&self.calendar_id, &rule_id)
             .doit()
             .await?;
@@ -152,9 +176,7 @@ impl GCal {
     }
 
     /// Fetches entire ACL by fetching all pages of the ACL
-    async fn acl_list(
-        &self,
-    ) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
+    async fn acl_list(&self) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
         let mut rules = Vec::new();
         let mut page_token = None;
 
@@ -163,7 +185,9 @@ impl GCal {
             rules.append(&mut next_rules);
             page_token = next_page_token;
 
-            if page_token.is_none() { break; }
+            if page_token.is_none() {
+                break;
+            }
         }
 
         Ok(rules)
@@ -382,7 +406,7 @@ mod test {
     use tap::prelude::*;
 
     #[test]
-    fn acl_diff() {
+    fn acl_sync_ops() {
         let emails = vec!["user0@example.com", "user1@example.com"];
         let rules = vec![
             api::AclRule {
@@ -410,11 +434,10 @@ mod test {
                 ..Default::default()
             },
         ];
-        let actual = GCal::acl_diff(&emails, &rules)
-            .tap_mut(|diffs| diffs.sort());
+        let actual = GCal::acl_sync_ops(&emails, &rules).tap_mut(|diffs| diffs.sort());
         let expected = vec![
-            UserDiff::Add("user0@example.com".to_string()),
-            UserDiff::Del("user2@example.com".to_string()),
+            AclSyncOp::Insert("user0@example.com".to_string()),
+            AclSyncOp::Delete("user2@example.com".to_string()),
         ];
         assert_eq!(actual, expected);
     }
