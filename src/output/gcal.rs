@@ -64,6 +64,45 @@ impl GCal {
         Ok(gcal)
     }
 
+    /// Fetches entire ACL using one or more requests for pagination
+    async fn acl_list(
+        &self,
+    ) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
+        let mut rules = Vec::new();
+        let mut page_token = None;
+
+        loop {
+            let (mut next_rules, next_page_token) = self.acl_list_page(page_token).await?;
+            rules.append(&mut next_rules);
+            page_token = next_page_token;
+
+            if page_token.is_none() { break; }
+        }
+
+        Ok(rules)
+    }
+
+    /// Fetches a single page of the ACL
+    async fn acl_list_page(
+        &self,
+        page_token: Option<String>,
+    ) -> Result<(Vec<api::AclRule>, Option<String>), Box<dyn std::error::Error>> {
+        let call = self.hub.acl()
+            .list(&self.calendar_id)
+            .add_scope(SCOPE);
+        let call = match page_token {
+            Some(page_token) => call.page_token(&page_token),
+            None => call,
+        };
+        let (rsp, acl) = call
+            .doit()
+            .await?;
+        trace!(?rsp);
+        debug!(?acl);
+
+        Ok((acl.items.unwrap(), acl.next_page_token))
+    }
+
     async fn create_hub(
         client_secret_json_path: &str,
         oauth_token_json_path: &str,
