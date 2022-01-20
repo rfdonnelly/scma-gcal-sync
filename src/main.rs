@@ -213,7 +213,18 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match args.output {
-        OutputType::GCal => todo!(),
+        OutputType::GCal => {
+            let emails: Vec<&str> = users.iter().map(|user| user.email.as_ref()).collect();
+
+            GCal::new(
+                &args.calendar,
+                &args.client_secret_json_path,
+                &args.oauth_token_json_path,
+            )
+            .await?
+            .acl_sync(&emails)
+            .await?;
+        }
         OutputType::Yaml => {
             info!(output=?args.output_file, "Writing users");
             match args.output_file {
