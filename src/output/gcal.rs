@@ -27,6 +27,10 @@ const CONCURRENT_REQUESTS: usize = 3;
 const CONCURRENT_REQUESTS_ACL: usize = 1;
 const SCOPE: api::Scope = api::Scope::Full;
 
+/// NOTE: if this is false, users will not be able to add the calendar unless they the calendar ID
+/// or a a link to the calendar.
+const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
+
 impl GCal {
     pub async fn new(
         calendar_name: &str,
@@ -119,7 +123,7 @@ impl GCal {
     ///
     /// * Insert user0@example.com
     /// * Delete user2@example.com
-    pub fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> Vec<AclSyncOp> {
+    fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> Vec<AclSyncOp> {
         let readers: HashSet<String> = rules
             .iter()
             .filter(|rule| rule.role == Some("reader".to_string()))
@@ -162,7 +166,7 @@ impl GCal {
             .hub
             .acl()
             .insert(req, &self.calendar_id)
-            .send_notifications(true)
+            .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
             .doit()
             .await?;
         trace!(?rsp);
@@ -209,16 +213,12 @@ impl GCal {
         &self,
         page_token: Option<String>,
     ) -> Result<(Vec<api::AclRule>, Option<String>), Box<dyn std::error::Error>> {
-        let call = self.hub.acl()
-            .list(&self.calendar_id)
-            .add_scope(SCOPE);
+        let call = self.hub.acl().list(&self.calendar_id).add_scope(SCOPE);
         let call = match page_token {
             Some(page_token) => call.page_token(&page_token),
             None => call,
         };
-        let (rsp, acl) = call
-            .doit()
-            .await?;
+        let (rsp, acl) = call.doit().await?;
         trace!(?rsp);
         debug!(?acl);
 
