@@ -14,6 +14,12 @@ pub struct GCal {
     hub: CalendarHub,
 }
 
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+pub enum UserDiff {
+    Add(String),
+    Del(String),
+}
+
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
 const SCOPE: api::Scope = api::Scope::Full;
@@ -70,24 +76,37 @@ impl GCal {
         &self,
         emails: &[&str],
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let readers: HashSet<String> = self.acl_list().await?
+        let acls = self.acl_list().await?;
+        let diffs = Self::acl_diff(emails, &acls);
+
+        for diff in diffs {
+            match diff {
+                UserDiff::Add(email) => self.acl_insert(&email, "reader").await?,
+                UserDiff::Del(email) => self.acl_delete(&email).await?,
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Returns a diff between emails and readers (ACL rules with the reader role).
+    pub fn acl_diff(
+        emails: &[&str],
+        rules: &[api::AclRule],
+    ) -> Vec<UserDiff> {
+        let readers: HashSet<String> = rules
             .iter()
             .filter(|rule| rule.role == Some("reader".to_string()))
             .map(|rule| rule.scope.as_ref().unwrap().value.as_ref().unwrap().to_string())
             .collect();
         let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
 
-        let to_add = emails.difference(&readers);
-        let to_del = readers.difference(&emails);
+        let to_add = emails.difference(&readers).map(|email| UserDiff::Add(email.to_string()));
+        let to_del = readers.difference(&emails).map(|email| UserDiff::Del(email.to_string()));
+        let diffs: Vec<UserDiff> = to_add.chain(to_del).collect();
+        info!(?diffs);
 
-        for email in to_add {
-            self.acl_insert(email, "reader").await?;
-        }
-        for email in to_del {
-            self.acl_delete(email).await?;
-        }
-
-        Ok(())
+        diffs
     }
 
     async fn acl_insert(
@@ -354,4 +373,49 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     }
 
     Ok(buffer)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use tap::prelude::*;
+
+    #[test]
+    fn acl_diff() {
+        let emails = vec!["user0@example.com", "user1@example.com"];
+        let rules = vec![
+            api::AclRule {
+                role: Some("ignored".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("ignored@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+            api::AclRule {
+                role: Some("reader".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("user1@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+            api::AclRule {
+                role: Some("reader".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("user2@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+        ];
+        let actual = GCal::acl_diff(&emails, &rules)
+            .tap_mut(|diffs| diffs.sort());
+        let expected = vec![
+            UserDiff::Add("user0@example.com".to_string()),
+            UserDiff::Del("user2@example.com".to_string()),
+        ];
+        assert_eq!(actual, expected);
+    }
 }
