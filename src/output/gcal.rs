@@ -15,7 +15,7 @@ pub struct GCal {
 
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
-const SCOPE: google_calendar3::api::Scope = google_calendar3::api::Scope::Full;
+const SCOPE: api::Scope = api::Scope::Full;
 
 impl GCal {
     pub async fn new(
