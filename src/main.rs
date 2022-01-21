@@ -243,7 +243,7 @@ async fn scma_to_gcal(
     gcal: &GCal,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let event = web.fetch_event_details(event).await?;
-    gcal.patch_or_insert_event(&event).await
+    gcal.events_patch_or_insert(&event).await
 }
 
 async fn web_events<'a>(

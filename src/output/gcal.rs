@@ -252,7 +252,7 @@ impl GCal {
 
     pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
         stream::iter(events)
-            .map(|event| self.patch_or_insert_event(event))
+            .map(|event| self.events_patch_or_insert(event))
             .buffer_unordered(CONCURRENT_REQUESTS)
             .try_collect::<Vec<_>>()
             .await?;
@@ -260,7 +260,7 @@ impl GCal {
         Ok(())
     }
 
-    pub async fn patch_or_insert_event(
+    pub async fn events_patch_or_insert(
         &self,
         event: &Event,
     ) -> Result<(), Box<dyn std::error::Error>> {
