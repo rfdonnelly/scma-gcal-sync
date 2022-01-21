@@ -6,6 +6,7 @@ use google_calendar3::{api, CalendarHub};
 use tracing::{debug, info, trace};
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
+use std::collections::HashSet;
 use std::fmt::Write;
 
 pub struct GCal {
@@ -13,9 +14,22 @@ pub struct GCal {
     hub: CalendarHub,
 }
 
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+pub enum AclSyncOp {
+    Insert(String),
+    Delete(String),
+}
+
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
+/// The number of concurrent ACL insert/delete requests to make.  Experienced rate limiting with a
+/// value of 3.
+const CONCURRENT_REQUESTS_ACL: usize = 1;
 const SCOPE: api::Scope = api::Scope::Full;
+
+/// NOTE: if this is false, users will not be able to add the calendar unless they the calendar ID
+/// or a a link to the calendar.
+const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
 
 impl GCal {
     pub async fn new(
@@ -49,8 +63,8 @@ impl GCal {
                     ..Default::default()
                 };
                 let (rsp, calendar) = hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
-                trace!(?rsp);
-                debug!(?calendar);
+                trace!(?rsp, "calendars.insert");
+                debug!(?calendar, "calendars.insert");
 
                 let calendar_id = calendar.id.as_ref().unwrap().clone();
                 info!(%calendar_name, %calendar_id, "Inserted new calendar");
@@ -62,6 +76,153 @@ impl GCal {
         let gcal = Self { calendar_id, hub };
 
         Ok(gcal)
+    }
+
+    // Syncs emails with readers in calendar ACL
+    pub async fn acl_sync(&self, emails: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+        let acls = self.acl_list().await?;
+        let ops = Self::acl_sync_ops(emails, &acls);
+
+        stream::iter(ops)
+            .map(|op| self.acl_insert_or_delete(op))
+            .buffer_unordered(CONCURRENT_REQUESTS_ACL)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(())
+    }
+
+    async fn acl_insert_or_delete(&self, op: AclSyncOp) -> Result<(), Box<dyn std::error::Error>> {
+        match op {
+            AclSyncOp::Insert(email) => self.acl_insert(&email, "reader").await?,
+            AclSyncOp::Delete(email) => self.acl_delete(&email).await?,
+        }
+
+        Ok(())
+    }
+
+    /// Returns a list of operations that need to be performed on the ACL to bring the ACL in sync
+    /// with a set of user emails.
+    ///
+    /// Operates on the "reader" role only.
+    ///
+    /// This effectively performs a diff from readers to emails.
+    ///
+    /// For example, if given the set of emails:
+    ///
+    /// * user0@example.com
+    /// * user1@example.com
+    ///
+    /// And the set of readers:
+    ///
+    /// * user1@example.com
+    /// * user2@example.com
+    ///
+    /// To bring the readers in sync with the emails, the following operations would need to be
+    /// performed on the readers:
+    ///
+    /// * Insert user0@example.com
+    /// * Delete user2@example.com
+    fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> Vec<AclSyncOp> {
+        let readers: HashSet<String> = rules
+            .iter()
+            .filter(|rule| rule.role == Some("reader".to_string()))
+            .map(|rule| {
+                rule.scope
+                    .as_ref()
+                    .unwrap()
+                    .value
+                    .as_ref()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
+
+        let to_add = emails
+            .difference(&readers)
+            .map(|email| AclSyncOp::Insert(email.to_string()));
+        let to_del = readers
+            .difference(&emails)
+            .map(|email| AclSyncOp::Delete(email.to_string()));
+        let diffs: Vec<AclSyncOp> = to_add.chain(to_del).collect();
+        info!(?diffs);
+
+        diffs
+    }
+
+    async fn acl_insert(&self, email: &str, role: &str) -> Result<(), Box<dyn std::error::Error>> {
+        info!(%email, "Adding user");
+
+        let req = api::AclRule {
+            role: Some(role.to_string()),
+            scope: Some(api::AclRuleScope {
+                type_: Some("user".to_string()),
+                value: Some(email.to_string()),
+            }),
+            ..Default::default()
+        };
+        let (rsp, rule) = self
+            .hub
+            .acl()
+            .insert(req, &self.calendar_id)
+            .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
+            .doit()
+            .await?;
+        trace!(?rsp, "acl.insert");
+        debug!(?rule, "acl.insert");
+
+        Ok(())
+    }
+
+    async fn acl_delete(&self, email: &str) -> Result<(), Box<dyn std::error::Error>> {
+        info!(%email, "Deleting user");
+
+        let rule_id = format!("user:{}", email);
+        let rsp = self
+            .hub
+            .acl()
+            .delete(&self.calendar_id, &rule_id)
+            .doit()
+            .await?;
+        trace!(?rsp, "acl.delete");
+
+        Ok(())
+    }
+
+    /// Fetches entire ACL by fetching all pages of the ACL
+    async fn acl_list(&self) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
+        let mut rules = Vec::new();
+        let mut page_token = None;
+
+        loop {
+            let (mut next_rules, next_page_token) = self.acl_list_page(page_token).await?;
+            rules.append(&mut next_rules);
+            page_token = next_page_token;
+
+            if page_token.is_none() {
+                break;
+            }
+        }
+
+        Ok(rules)
+    }
+
+    /// Fetches a single page of the ACL
+    async fn acl_list_page(
+        &self,
+        page_token: Option<String>,
+    ) -> Result<(Vec<api::AclRule>, Option<String>), Box<dyn std::error::Error>> {
+        let call = self.hub.acl().list(&self.calendar_id).add_scope(SCOPE);
+        let call = match page_token {
+            Some(page_token) => call.page_token(&page_token),
+            None => call,
+        };
+        let (rsp, acl) = call.doit().await?;
+        trace!(?rsp, "acl.list");
+        debug!(?acl, "acl.list");
+
+        Ok((acl.items.unwrap(), acl.next_page_token))
     }
 
     async fn create_hub(
@@ -114,6 +275,14 @@ impl GCal {
             .doit()
             .await;
         match result {
+            Ok(rsp) => {
+                let (rsp, g_event) = rsp;
+                trace!(?rsp, "events.patch");
+                debug!(?g_event, "events.patch");
+
+                let link = g_event.html_link.as_ref().unwrap();
+                info!(%event.id, %event, %link, "Updated");
+            }
             Err(_) => {
                 let (rsp, g_event) = self
                     .hub
@@ -122,19 +291,11 @@ impl GCal {
                     .add_scope(SCOPE)
                     .doit()
                     .await?;
-                trace!(?rsp);
-                debug!(?g_event);
+                trace!(?rsp, "events.insert");
+                debug!(?g_event, "events.insert");
 
                 let link = g_event.html_link.as_ref().unwrap();
                 info!(%event.id, %event, %link, "Inserted");
-            }
-            Ok(rsp) => {
-                let (rsp, g_event) = rsp;
-                trace!(?rsp);
-                debug!(?g_event);
-
-                let link = g_event.html_link.as_ref().unwrap();
-                info!(%event.id, %event, %link, "Updated");
             }
         }
 
@@ -247,4 +408,48 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     }
 
     Ok(buffer)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use tap::prelude::*;
+
+    #[test]
+    fn acl_sync_ops() {
+        let emails = vec!["user0@example.com", "user1@example.com"];
+        let rules = vec![
+            api::AclRule {
+                role: Some("ignored".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("ignored@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+            api::AclRule {
+                role: Some("reader".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("user1@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+            api::AclRule {
+                role: Some("reader".to_string()),
+                scope: Some(api::AclRuleScope {
+                    type_: Some("user".to_string()),
+                    value: Some("user2@example.com".to_string()),
+                }),
+                ..Default::default()
+            },
+        ];
+        let actual = GCal::acl_sync_ops(&emails, &rules).tap_mut(|diffs| diffs.sort());
+        let expected = vec![
+            AclSyncOp::Insert("user0@example.com".to_string()),
+            AclSyncOp::Delete("user2@example.com".to_string()),
+        ];
+        assert_eq!(actual, expected);
+    }
 }

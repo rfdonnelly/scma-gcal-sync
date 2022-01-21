@@ -69,7 +69,19 @@ The following examples operate on users.
 
 Fetch users from the SCMA website and converts them to YAML.
 
- scma-gcal-sync -u <scma-username> -p <scma-password> -d users -o yaml > users.yml
+ scma-gcal-sync -d users -u <scma-username> -p <scma-password> -o yaml > users.yml
+
+==== YAML to GCal
+
+Read users from a YAML file and sync them to the Access Control List (ACL) for Google Calendar.
+
+ scma-gcal-sync -d users -i yaml --ifile users.yml
+
+==== Web to GCal
+
+Fetch users from the SCMA website and sync them to the Access Control List (ACL) for Google Calendar.
+
+ scma-gcal-sync -d users -u <scma-username> -p <scma-password>
 
 == Limitations
 
