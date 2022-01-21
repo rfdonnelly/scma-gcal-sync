@@ -1,10 +1,10 @@
 use crate::model::Event;
+use crate::GAuth;
 
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api, CalendarHub};
 use tracing::{debug, info, trace};
-use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -32,12 +32,8 @@ const SCOPE: api::Scope = api::Scope::Full;
 const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
 
 impl GCal {
-    pub async fn new(
-        calendar_name: &str,
-        client_secret_json_path: &str,
-        oauth_token_json_path: &str,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let hub = Self::create_hub(client_secret_json_path, oauth_token_json_path).await?;
+    pub async fn new(calendar_name: &str, auth: GAuth) -> Result<Self, Box<dyn std::error::Error>> {
+        let hub = Self::create_hub(auth).await?;
 
         info!(%calendar_name, "Finding calendar");
         let (rsp, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
@@ -225,27 +221,15 @@ impl GCal {
         Ok((acl.items.unwrap(), acl.next_page_token))
     }
 
-    async fn create_hub(
-        client_secret_json_path: &str,
-        oauth_token_json_path: &str,
-    ) -> Result<CalendarHub, Box<dyn std::error::Error>> {
-        let secret = yup_oauth2::read_application_secret(client_secret_json_path).await?;
-
-        info!(oauth_client_id=?secret.client_id, "Authenticating");
-        let auth =
-            InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-                .persist_tokens_to_disk(oauth_token_json_path)
-                .build()
-                .await?;
-
+    async fn create_hub(gauth: GAuth) -> Result<CalendarHub, Box<dyn std::error::Error>> {
         let scopes = [SCOPE];
-        let token = auth.token(&scopes).await?;
+        let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");
 
         let client =
             hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
 
-        let hub = CalendarHub::new(client, auth);
+        let hub = CalendarHub::new(client, gauth.into());
 
         Ok(hub)
     }

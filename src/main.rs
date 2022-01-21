@@ -4,7 +4,7 @@ mod output;
 
 use input::{EventList, Web};
 use model::DateSelect;
-use output::GCal;
+use output::{GAuth, GCal};
 
 use clap::{AppSettings, ArgEnum, Parser};
 use futures::{stream, StreamExt, TryStreamExt};
@@ -131,13 +131,12 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             // Handle this case specially to maximize concurrency
             //
             // I've found it difficult to do this in a more general fashion.
+            let auth =
+                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+
             let ((web, events), gcal) = tokio::try_join!(
                 web_events(&args.username, &args.password, dates),
-                GCal::new(
-                    &args.calendar,
-                    &args.client_secret_json_path,
-                    &args.oauth_token_json_path,
-                ),
+                GCal::new(&args.calendar, auth),
             )?;
 
             stream::iter(events)
@@ -166,14 +165,13 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
             match args.output {
                 OutputType::GCal => {
-                    GCal::new(
-                        &args.calendar,
-                        &args.client_secret_json_path,
-                        &args.oauth_token_json_path,
-                    )
-                    .await?
-                    .write(&events)
-                    .await?;
+                    let auth =
+                        GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path)
+                            .await?;
+                    GCal::new(&args.calendar, auth)
+                        .await?
+                        .write(&events)
+                        .await?;
                 }
                 OutputType::Yaml => {
                     info!(output=?args.output_file, "Writing events");
@@ -216,14 +214,12 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         OutputType::GCal => {
             let emails: Vec<&str> = users.iter().map(|user| user.email.as_ref()).collect();
 
-            GCal::new(
-                &args.calendar,
-                &args.client_secret_json_path,
-                &args.oauth_token_json_path,
-            )
-            .await?
-            .acl_sync(&emails)
-            .await?;
+            let auth =
+                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+            GCal::new(&args.calendar, auth)
+                .await?
+                .acl_sync(&emails)
+                .await?;
         }
         OutputType::Yaml => {
             info!(output=?args.output_file, "Writing users");
