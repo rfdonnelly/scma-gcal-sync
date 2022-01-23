@@ -34,7 +34,32 @@ const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
 impl GCal {
     pub async fn new(calendar_name: &str, auth: GAuth) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
+        let calendar_id = Self::calendars_get_or_insert_by_name(&hub, calendar_name).await?;
 
+        let gcal = Self { calendar_id, hub };
+        Ok(gcal)
+    }
+
+    async fn create_hub(gauth: GAuth) -> Result<CalendarHub, Box<dyn std::error::Error>> {
+        let scopes = [SCOPE];
+        let token = gauth.auth().token(&scopes).await?;
+        info!(expiration_time=?token.expiration_time(), "Got token");
+
+        let client =
+            hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
+
+        let hub = CalendarHub::new(client, gauth.into());
+
+        Ok(hub)
+    }
+
+    /// Returns the Calendar.id of the named calendar.
+    ///
+    /// If named calendar does not exist, a new calendar will be created.
+    async fn calendars_get_or_insert_by_name(
+        hub: &CalendarHub,
+        calendar_name: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         info!(%calendar_name, "Finding calendar");
         let (rsp, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
         trace!(?rsp, "calendar_list.list");
@@ -69,9 +94,7 @@ impl GCal {
             }
         };
 
-        let gcal = Self { calendar_id, hub };
-
-        Ok(gcal)
+        Ok(calendar_id)
     }
 
     // Syncs emails with readers in calendar ACL
@@ -219,19 +242,6 @@ impl GCal {
         debug!(?acl, "acl.list");
 
         Ok((acl.items.unwrap(), acl.next_page_token))
-    }
-
-    async fn create_hub(gauth: GAuth) -> Result<CalendarHub, Box<dyn std::error::Error>> {
-        let scopes = [SCOPE];
-        let token = gauth.auth().token(&scopes).await?;
-        info!(expiration_time=?token.expiration_time(), "Got token");
-
-        let client =
-            hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
-
-        let hub = CalendarHub::new(client, gauth.into());
-
-        Ok(hub)
     }
 
     pub async fn write(&self, events: &[Event]) -> Result<(), Box<dyn std::error::Error>> {
