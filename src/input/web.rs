@@ -360,7 +360,8 @@ impl TryFrom<Page> for Users {
                 let phone = tr
                     .find(Class("cbUserListFC_cb_phone"))
                     .next()
-                    .map(|node| node.text());
+                    .map(|node| node.text())
+                    .map(|phone| normalize_phone_number(&phone));
                 let email_id = tr
                     .find(Class("cbMailRepl"))
                     .next()
@@ -391,6 +392,12 @@ impl TryFrom<Page> for Users {
 
         Ok(Users(members))
     }
+}
+
+fn normalize_phone_number(phone_number: &str) -> String {
+    let prefix = "+1".chars();
+    let suffix = phone_number.chars().filter(char::is_ascii_digit);
+    prefix.chain(suffix).collect()
 }
 
 #[cfg(test)]
@@ -451,5 +458,20 @@ mod test {
         let page = Page::from_file(path).unwrap();
         let users = Users::try_from(page).unwrap();
         insta::assert_yaml_snapshot!(users);
+    }
+
+    #[test]
+    fn normalize_phone_number() {
+        let phone_numbers = vec![
+            "(555) 555-5555",
+            "5555555555",
+            "555-555-5555",
+            "555 555 5555",
+        ];
+        let actual: Vec<String> = phone_numbers
+            .into_iter()
+            .map(super::normalize_phone_number)
+            .collect();
+        insta::assert_yaml_snapshot!(actual);
     }
 }

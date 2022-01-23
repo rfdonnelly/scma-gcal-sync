@@ -1,6 +1,6 @@
 ---
 source: src/input/web.rs
-assertion_line: 455
+assertion_line: 460
 expression: users
 
 ---
@@ -12,7 +12,7 @@ expression: users
   city: A City
   state: CA
   zipcode: "55555"
-  phone: 555-555-5555
+  phone: "+15555555555"
   email: johndoe@gmail.com
 - name: Jane Doe
   member_status: HM
@@ -22,7 +22,7 @@ expression: users
   city: Los Angeles
   state: CA
   zipcode: "55555"
-  phone: "1234567890"
+  phone: "+11234567890"
   email: jane.doe@gmail.com
 - name: First Last
   member_status: Student
@@ -32,6 +32,6 @@ expression: users
   city: Another City
   state: CA
   zipcode: "55553"
-  phone: (555) 555-5554
+  phone: "+15555555554"
   email: first.last@gmail.com
 

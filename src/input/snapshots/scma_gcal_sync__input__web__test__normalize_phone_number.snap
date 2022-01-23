@@ -1,0 +1,11 @@
+---
+source: src/input/web.rs
+assertion_line: 472
+expression: actual
+
+---
+- "+15555555555"
+- "+15555555555"
+- "+15555555555"
+- "+15555555555"
+
