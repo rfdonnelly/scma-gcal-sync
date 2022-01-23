@@ -4,7 +4,7 @@ mod output;
 
 use input::{EventList, Web};
 use model::DateSelect;
-use output::{GAuth, GCal};
+use output::{GAuth, GCal, GPpl};
 
 use clap::{AppSettings, ArgEnum, Parser};
 use futures::{stream, StreamExt, TryStreamExt};
@@ -30,6 +30,8 @@ enum InputType {
 enum OutputType {
     #[clap(name = "gcal")]
     GCal,
+    #[clap(name = "gppl")]
+    GPpl,
     Yaml,
 }
 
@@ -89,9 +91,6 @@ struct Args {
     #[clap(long)]
     all: bool,
 
-    /// The name of the Google Calendar to sync to.
-    #[clap(short, long, default_value = "SCMA")]
-    calendar: String,
     /// The client secret JSON is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
     ///
@@ -106,6 +105,14 @@ struct Args {
     /// authentication token.
     #[clap(long, default_value = "token.json", env = "GCAL_OAUTH_TOKEN_JSON_PATH")]
     oauth_token_json_path: String,
+
+    /// The name of the Google Calendar to sync to.
+    #[clap(short, long, default_value = "SCMA")]
+    calendar: String,
+
+    /// The name of the Google Contacts label to use.
+    #[clap(long, default_value = "SCMA")]
+    group: String,
 }
 
 #[tokio::main]
@@ -185,6 +192,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         PipeFile::File(_) => todo!(),
                     }
                 }
+                OutputType::GPpl => unimplemented!(),
             }
         }
     }
@@ -232,6 +240,11 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 PipeFile::Pipe => println!("{}", serde_yaml::to_string(&users)?),
                 PipeFile::File(_) => todo!(),
             }
+        }
+        OutputType::GPpl => {
+            let auth =
+                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+            GPpl::new(&args.group, auth).await?.people_sync(users).await?;
         }
     }
 

@@ -403,6 +403,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "google-people1"
+version = "2.0.8+20210330"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276be6aac64e73ac7739f63e2473d10856a5c1ed3ed67f7f1c08f7ba6d1ba02f"
+dependencies = [
+ "hyper",
+ "hyper-rustls",
+ "itertools",
+ "mime 0.2.6",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url 1.7.2",
+ "yup-oauth2",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1305,6 +1322,7 @@ dependencies = [
  "clap",
  "futures",
  "google-calendar3",
+ "google-people1",
  "html-escape",
  "hyper",
  "hyper-rustls",

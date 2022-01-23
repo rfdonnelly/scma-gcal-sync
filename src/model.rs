@@ -67,13 +67,19 @@ pub enum DateSelect {
     NotPast,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MemberStatus {
     Applicant,
     Student,
     AM,
     HM,
     RM,
+}
+
+impl Default for MemberStatus {
+    fn default() -> Self {
+        Self::Applicant
+    }
 }
 
 impl FromStr for MemberStatus {
@@ -91,11 +97,29 @@ impl FromStr for MemberStatus {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl fmt::Display for MemberStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Applicant => write!(f, "Applicant"),
+            Self::Student => write!(f, "Student"),
+            Self::AM => write!(f, "AM"),
+            Self::HM => write!(f, "HM"),
+            Self::RM => write!(f, "RM"),
+        }
+    }
+}
+
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TripLeaderStatus {
     G,
     S1,
     S2,
+}
+
+impl Default for TripLeaderStatus {
+    fn default() -> Self {
+        Self::G
+    }
 }
 
 impl FromStr for TripLeaderStatus {
@@ -111,7 +135,17 @@ impl FromStr for TripLeaderStatus {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl fmt::Display for TripLeaderStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::G => write!(f, "G"),
+            Self::S1 => write!(f, "S1"),
+            Self::S2 => write!(f, "S2"),
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub struct User {
     pub name: String,
     pub member_status: MemberStatus,
@@ -123,4 +157,10 @@ pub struct User {
     pub zipcode: String,
     pub phone: Option<String>,
     pub email: String,
+}
+
+impl User {
+    pub fn name_email(&self) -> String {
+        format!("{} <{}>", self.name, self.email)
+    }
 }
