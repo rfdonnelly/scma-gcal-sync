@@ -361,7 +361,7 @@ impl TryFrom<Page> for Users {
                     .find(Class("cbUserListFC_cb_phone"))
                     .next()
                     .map(|node| node.text())
-                    .map(|phone| normalize_phone_number(&phone));
+                    .map(normalize_phone_number);
                 let email_id = tr
                     .find(Class("cbMailRepl"))
                     .next()
@@ -394,9 +394,12 @@ impl TryFrom<Page> for Users {
     }
 }
 
-fn normalize_phone_number(phone_number: &str) -> String {
+fn normalize_phone_number<S>(phone_number: S) -> String
+where
+    S: AsRef<str>,
+{
     let prefix = "+1".chars();
-    let suffix = phone_number.chars().filter(char::is_ascii_digit);
+    let suffix = phone_number.as_ref().chars().filter(char::is_ascii_digit);
     prefix.chain(suffix).collect()
 }
 
