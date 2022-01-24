@@ -65,7 +65,11 @@ impl GPpl {
         trace!(?member_resource_names);
 
         info!("Getting group member details");
-        let members = self.people_batch_get(&member_resource_names).await?;
+        let members = if member_resource_names.is_empty() {
+            Vec::new()
+        } else {
+            self.people_batch_get(&member_resource_names).await?
+        };
         info!(member_count = members.len(), "Got group member details");
         trace!(?members);
 
