@@ -14,7 +14,7 @@ pub struct GCal {
     hub: CalendarHub,
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub enum AclSyncOp {
     Insert(String),
     Delete(String),
@@ -158,16 +158,16 @@ impl GCal {
             .collect();
         let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
 
-        let to_add = emails
+        let inserts = emails
             .difference(&readers)
             .map(|email| AclSyncOp::Insert(email.to_string()));
-        let to_del = readers
+        let deletes = readers
             .difference(&emails)
             .map(|email| AclSyncOp::Delete(email.to_string()));
-        let diffs: Vec<AclSyncOp> = to_add.chain(to_del).collect();
-        info!(?diffs);
+        let ops: Vec<AclSyncOp> = inserts.chain(deletes).collect();
+        info!(?ops);
 
-        diffs
+        ops
     }
 
     async fn acl_insert(&self, email: &str, role: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -439,7 +439,7 @@ mod test {
                 ..Default::default()
             },
         ];
-        let actual = GCal::acl_sync_ops(&emails, &rules).tap_mut(|diffs| diffs.sort());
+        let actual = GCal::acl_sync_ops(&emails, &rules).tap_mut(|ops| ops.sort());
         let expected = vec![
             AclSyncOp::Insert("user0@example.com".to_string()),
             AclSyncOp::Delete("user2@example.com".to_string()),
