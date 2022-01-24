@@ -371,7 +371,7 @@ impl TryFrom<Page> for Users {
                 let undefined = "UNDEFINED".to_string();
                 let addy = id_addys.get(email_id).unwrap_or(&undefined);
                 let email = addy_emails.get(addy).unwrap_or(&undefined);
-                let email = email.to_string();
+                let email = normalize_email(email);
 
                 let user = User {
                     name,
@@ -401,6 +401,13 @@ where
     let prefix = "+1".chars();
     let suffix = phone_number.as_ref().chars().filter(char::is_ascii_digit);
     prefix.chain(suffix).collect()
+}
+
+fn normalize_email<S>(email: S) -> String
+where
+    S: AsRef<str>,
+{
+    email.as_ref().to_lowercase()
 }
 
 #[cfg(test)]
