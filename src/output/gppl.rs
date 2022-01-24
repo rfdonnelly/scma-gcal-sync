@@ -10,6 +10,7 @@ const SCOPE: api::Scope = api::Scope::Contact;
 
 const CONTACT_GROUPS_GET_MAX_MEMBERS: i32 = 999;
 const PEOPLE_BATCH_CREATE_MAX_CONTACTS: usize = 50;
+const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
 
 /// Algorithm
 ///
@@ -199,6 +200,36 @@ impl GPpl {
 
     // Returns name, email, and phone number for the given Person.resource_names
     async fn people_batch_get(
+        &self,
+        resource_names: &[String],
+    ) -> Result<Vec<Person>, Box<dyn std::error::Error>> {
+        let mut people = Vec::new();
+        let mut lower = 0;
+        let mut upper = PEOPLE_BATCH_GET_MAX_CONTACTS.min(resource_names.len());
+
+        loop {
+            let (left, _) = resource_names.split_at(upper);
+            let (_, chunk) = left.split_at(lower);
+
+            info!("Getting group member details {} to {} of {}", lower, upper, resource_names.len());
+            let mut people_page = self.people_batch_get_page(chunk).await?;
+            people.append(&mut people_page);
+
+            if upper == resource_names.len() {
+                break;
+            }
+
+            (lower, upper) = {
+                let lower_next = upper;
+                let upper_next = (upper + PEOPLE_BATCH_GET_MAX_CONTACTS).min(resource_names.len());
+                (lower_next, upper_next)
+            };
+        }
+
+        Ok(people)
+    }
+
+    async fn people_batch_get_page(
         &self,
         resource_names: &[String],
     ) -> Result<Vec<Person>, Box<dyn std::error::Error>> {
