@@ -163,4 +163,11 @@ impl User {
     pub fn name_email(&self) -> String {
         format!("{} <{}>", self.name, self.email)
     }
+
+    pub fn address(&self) -> String {
+        format!(
+            "{}, {}, {} {}",
+            self.address, self.city, self.state, self.zipcode
+        )
+    }
 }

@@ -423,13 +423,9 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         value: Some(user.email.clone()),
         ..Default::default()
     };
-    let address = format!(
-        "{}, {}, {} {}",
-        user.address, user.city, user.state, user.zipcode
-    );
     let address = api::Address {
         type_: Some("SCMA".to_string()),
-        formatted_value: Some(address),
+        formatted_value: Some(user.address()),
         ..Default::default()
     };
     let phone_number = api::PhoneNumber {
