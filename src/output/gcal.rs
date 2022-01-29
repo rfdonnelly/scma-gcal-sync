@@ -12,6 +12,7 @@ use std::fmt::Write;
 pub struct GCal {
     calendar_id: String,
     hub: CalendarHub,
+    dry_run: bool,
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -32,11 +33,19 @@ const SCOPE: api::Scope = api::Scope::Full;
 const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
 
 impl GCal {
-    pub async fn new(calendar_name: &str, auth: GAuth) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(
+        calendar_name: &str,
+        auth: GAuth,
+        dry_run: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
         let calendar_id = Self::calendars_get_or_insert_by_name(&hub, calendar_name).await?;
 
-        let gcal = Self { calendar_id, hub };
+        let gcal = Self {
+            calendar_id,
+            hub,
+            dry_run,
+        };
         Ok(gcal)
     }
 
@@ -181,15 +190,17 @@ impl GCal {
             }),
             ..Default::default()
         };
-        let (rsp, rule) = self
-            .hub
-            .acl()
-            .insert(req, &self.calendar_id)
-            .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
-            .doit()
-            .await?;
-        trace!(?rsp, "acl.insert");
-        debug!(?rule, "acl.insert");
+        if !self.dry_run {
+            let (rsp, rule) = self
+                .hub
+                .acl()
+                .insert(req, &self.calendar_id)
+                .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
+                .doit()
+                .await?;
+            trace!(?rsp, "acl.insert");
+            debug!(?rule, "acl.insert");
+        }
 
         Ok(())
     }
@@ -198,13 +209,15 @@ impl GCal {
         info!(%email, "Deleting user");
 
         let rule_id = format!("user:{}", email);
-        let rsp = self
-            .hub
-            .acl()
-            .delete(&self.calendar_id, &rule_id)
-            .doit()
-            .await?;
-        trace!(?rsp, "acl.delete");
+        if !self.dry_run {
+            let rsp = self
+                .hub
+                .acl()
+                .delete(&self.calendar_id, &rule_id)
+                .doit()
+                .await?;
+            trace!(?rsp, "acl.delete");
+        }
 
         Ok(())
     }
@@ -261,35 +274,37 @@ impl GCal {
         let g_event = api::Event::try_from(event)?;
 
         let event_id = g_event.id.as_ref().unwrap().clone();
-        let result = self
-            .hub
-            .events()
-            .patch(g_event.clone(), &self.calendar_id, &event_id)
-            .add_scope(SCOPE)
-            .doit()
-            .await;
-        match result {
-            Ok(rsp) => {
-                let (rsp, g_event) = rsp;
-                trace!(?rsp, "events.patch");
-                debug!(?g_event, "events.patch");
+        if !self.dry_run {
+            let result = self
+                .hub
+                .events()
+                .patch(g_event.clone(), &self.calendar_id, &event_id)
+                .add_scope(SCOPE)
+                .doit()
+                .await;
+            match result {
+                Ok(rsp) => {
+                    let (rsp, g_event) = rsp;
+                    trace!(?rsp, "events.patch");
+                    debug!(?g_event, "events.patch");
 
-                let link = g_event.html_link.as_ref().unwrap();
-                info!(%event.id, %event, %link, "Updated");
-            }
-            Err(_) => {
-                let (rsp, g_event) = self
-                    .hub
-                    .events()
-                    .insert(g_event, &self.calendar_id)
-                    .add_scope(SCOPE)
-                    .doit()
-                    .await?;
-                trace!(?rsp, "events.insert");
-                debug!(?g_event, "events.insert");
+                    let link = g_event.html_link.as_ref().unwrap();
+                    info!(%event.id, %event, %link, "Updated");
+                }
+                Err(_) => {
+                    let (rsp, g_event) = self
+                        .hub
+                        .events()
+                        .insert(g_event, &self.calendar_id)
+                        .add_scope(SCOPE)
+                        .doit()
+                        .await?;
+                    trace!(?rsp, "events.insert");
+                    debug!(?g_event, "events.insert");
 
-                let link = g_event.html_link.as_ref().unwrap();
-                info!(%event.id, %event, %link, "Inserted");
+                    let link = g_event.html_link.as_ref().unwrap();
+                    info!(%event.id, %event, %link, "Inserted");
+                }
             }
         }
 

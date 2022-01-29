@@ -55,11 +55,11 @@ impl From<&str> for PipeFile {
 #[clap(about, version, author)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct Args {
-    /// Include past events. Without this option, only present (in-progress) and future events will
-    /// be sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
-    /// applicable to the web input.
-    #[clap(long)]
-    all: bool,
+    /// Disables Google API methods that create, modify, or delete.
+    ///
+    /// NOTE: Does not disable creation of non-existent Calendar or ContactGroup.
+    #[clap(short = 'n', long)]
+    dry_run: bool,
 
     /// The data type to operate on.
     #[clap(arg_enum, short, long, default_value = "events")]
@@ -83,6 +83,11 @@ struct Args {
     /// Password for the SCMA website (https://rockclimbing.org).
     #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
+    /// Include past events. Without this option, only present (in-progress) and future events will
+    /// be sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
+    /// applicable to the web input.
+    #[clap(long)]
+    all: bool,
 
     /// The name of the Google Calendar to sync to.
     #[clap(short, long, default_value = "SCMA")]
@@ -136,7 +141,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
             let ((web, events), gcal) = tokio::try_join!(
                 web_events(&args.username, &args.password, dates),
-                GCal::new(&args.calendar, auth),
+                GCal::new(&args.calendar, auth, args.dry_run),
             )?;
 
             stream::iter(events)
@@ -168,7 +173,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     let auth =
                         GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path)
                             .await?;
-                    GCal::new(&args.calendar, auth)
+                    GCal::new(&args.calendar, auth, args.dry_run)
                         .await?
                         .write(&events)
                         .await?;
@@ -216,7 +221,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
             let auth =
                 GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
-            GCal::new(&args.calendar, auth)
+            GCal::new(&args.calendar, auth, args.dry_run)
                 .await?
                 .acl_sync(&emails)
                 .await?;
