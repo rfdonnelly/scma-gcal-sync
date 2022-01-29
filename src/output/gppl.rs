@@ -284,9 +284,13 @@ impl GPpl {
                     .clone();
                 let email = match person.email_addresses.as_ref() {
                     Some(emails) => {
-                        let email = emails.iter().next().unwrap();
-                        let email = email.value.as_ref().unwrap().clone();
-                        Some(email)
+                        // Use SCMA email if available otherwise use first email
+                        let find_type = Some("SCMA".to_string());
+                        let find_result = emails.iter().find(|email| email.type_ == find_type);
+                        match find_result {
+                            Some(email) => email.value.clone(),
+                            None => emails.first().unwrap().value.clone(),
+                        }
                     }
                     None => None,
                 };
