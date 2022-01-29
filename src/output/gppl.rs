@@ -11,8 +11,10 @@ const SCOPE: api::Scope = api::Scope::Contact;
 const CONTACT_GROUPS_GET_MAX_MEMBERS: i32 = 999;
 const PEOPLE_BATCH_CREATE_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
+const PEOPLE_BATCH_UPDATE_MAX_CONTACTS: usize = 50;
 const GROUP_FIELDS: &str = "name";
 const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
+const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
 
 /// Algorithm
 ///
@@ -102,13 +104,59 @@ impl GPpl {
             .map(|(user, _person)| user.name_email())
             .collect();
         info!(count=%updates.len(), "Updating people");
-        // TODO ...
+        let people = self.people_batch_update_ops(ops.updates);
+        self.people_batch_update(people).await?;
 
         let deletes: Vec<_> = ops.deletes.iter().map(PersonWrapper::name_email).collect();
         info!(count=%deletes.len(), ?deletes, "Deleting people");
         // TODO ...
 
-        todo!("Do insert, update, and delete");
+        Ok(())
+    }
+
+    fn people_batch_update_ops(&self, updates: Vec<(User, PersonWrapper)>) -> Vec<PersonWrapper> {
+        updates
+            .into_iter()
+            .map(|(user, mut person)| {
+                person.person = person_update(user, person.person);
+                person
+            })
+            .collect()
+    }
+
+    async fn people_batch_update(
+        &self,
+        people: Vec<PersonWrapper>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        for people_chunk in people.chunks(PEOPLE_BATCH_UPDATE_MAX_CONTACTS) {
+            let contacts = people_chunk
+                .iter()
+                .map(|person| (person.resource_name.clone(), person.person.clone()))
+                .collect();
+            let req = api::BatchUpdateContactsRequest {
+                contacts: Some(contacts),
+                read_mask: Some(PERSON_FIELDS_GET.to_string()),
+                update_mask: Some(PERSON_FIELDS_UPDATE.to_string()),
+                ..Default::default()
+            };
+
+            info!(
+            count=people_chunk.iter().count(),
+            people=?people_chunk.iter().map(PersonWrapper::name_email).collect::<Vec<String>>(),
+            "Updating contacts"
+            );
+            if !self.dry_run {
+                let (rsp, update_response) = self
+                    .hub
+                    .people()
+                    .batch_update_contacts(req)
+                    .add_scope(SCOPE)
+                    .doit()
+                    .await?;
+                trace!(?rsp, "people.batchUpdateContacts");
+                debug!(?update_response, "people.batchUpdateContacts");
+            }
+        }
 
         Ok(())
     }
@@ -477,6 +525,113 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         memberships: Some(vec![membership]),
         user_defined: Some(vec![member_status, trip_leader_status, position]),
         ..Default::default()
+    }
+}
+
+/// Updates any existing person with user information.
+///
+/// The Google People people.updateContact and people.batchUpdateContacts APIs overwrite the
+/// fields (and everything below them) specified via the FieldMask.  Because of this, we need to
+/// first get the fields we want to update then perform a manual merge of existing data and the
+/// data we want to update (or insert).
+///
+/// This function performs this manual merge.
+///
+/// It takes an api::Person (the existing Person) and a User and merges the User information into
+/// the existing Person.
+///
+/// For each merge field, it first attempts to find existing entries by type or key.  If an
+/// existing entry is found, it's value is overwritten.  If an existing entry is not found, one is
+/// inserted.
+///
+/// The following information is updated:
+///
+/// * Phone number
+/// * Address
+/// * Member status
+/// * Trip leader status
+/// * Position
+///
+/// The following information is _not_ updated:
+///
+/// * Membership
+///
+///   The person was found via their membership to the group_resource_name and
+///   therefore their membership is already as desired.
+///
+/// * Name
+///
+///   Prefer the name in Google Contacts.
+///
+/// * Email
+///
+///   The person-user pair was matched via their email and therefore the email is already as
+///   desired.
+fn person_update(from: User, into: api::Person) -> api::Person {
+    let mut into = into;
+
+    let dummy_group_resource_name = "";
+    let from = create_person(&from, dummy_group_resource_name);
+
+    let new_phone_number = from.phone_numbers.unwrap().into_iter().next().unwrap();
+    into.phone_numbers =
+        person_phone_numbers_update_or_insert(new_phone_number, into.phone_numbers);
+
+    let new_address = from.addresses.unwrap().into_iter().next().unwrap();
+    into.addresses = person_addresses_update_or_insert(new_address, into.addresses);
+
+    // TODO: Update
+    //
+    // * member status
+    // * trip leader status
+    // * position
+
+    into
+}
+
+fn person_phone_numbers_update_or_insert(
+    new_phone_number: api::PhoneNumber,
+    phone_numbers: Option<Vec<api::PhoneNumber>>,
+) -> Option<Vec<api::PhoneNumber>> {
+    match phone_numbers {
+        None => Some(vec![new_phone_number]),
+        Some(mut phone_numbers) => {
+            let find_result = phone_numbers
+                .iter_mut()
+                .find(|phone_number| phone_number.type_ == new_phone_number.type_);
+
+            match find_result {
+                // Update
+                Some(phone_number) => *phone_number = new_phone_number,
+                // Or insert
+                None => phone_numbers.push(new_phone_number),
+            }
+
+            Some(phone_numbers)
+        }
+    }
+}
+
+fn person_addresses_update_or_insert(
+    new_address: api::Address,
+    addresses: Option<Vec<api::Address>>,
+) -> Option<Vec<api::Address>> {
+    match addresses {
+        None => Some(vec![new_address]),
+        Some(mut addresses) => {
+            let find_result = addresses
+                .iter_mut()
+                .find(|address| address.type_ == new_address.type_);
+
+            match find_result {
+                // Update
+                Some(address) => *address = new_address,
+                // Or insert
+                None => addresses.push(new_address),
+            }
+
+            Some(addresses)
+        }
     }
 }
 
