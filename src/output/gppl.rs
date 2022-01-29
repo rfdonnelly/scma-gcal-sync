@@ -11,6 +11,8 @@ const SCOPE: api::Scope = api::Scope::Contact;
 const CONTACT_GROUPS_GET_MAX_MEMBERS: i32 = 999;
 const PEOPLE_BATCH_CREATE_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
+const GROUP_FIELDS: &str = "name";
+const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
 
 /// Algorithm
 ///
@@ -129,7 +131,7 @@ impl GPpl {
         let (rsp, list) = hub
             .contact_groups()
             .list()
-            .group_fields("name")
+            .group_fields(GROUP_FIELDS)
             .add_scope(SCOPE)
             .doit()
             .await?;
@@ -155,7 +157,7 @@ impl GPpl {
                         name: Some(group_name.to_string()),
                         ..Default::default()
                     }),
-                    read_group_fields: Some("name".to_string()),
+                    read_group_fields: Some(GROUP_FIELDS.to_string()),
                 };
                 let (rsp, group) = hub
                     .contact_groups()
@@ -186,7 +188,7 @@ impl GPpl {
             .contact_groups()
             .get(&group_resource_name)
             .max_members(CONTACT_GROUPS_GET_MAX_MEMBERS)
-            .group_fields("name")
+            .group_fields(GROUP_FIELDS)
             .add_scope(SCOPE)
             .doit()
             .await?;
@@ -237,12 +239,12 @@ impl GPpl {
     async fn people_batch_get_page(
         &self,
         resource_names: &[String],
-    ) -> Result<Vec<Person>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<PersonWrapper>, Box<dyn std::error::Error>> {
         let mut builder = self
             .hub
             .people()
             .get_batch_get()
-            .person_fields("names,emailAddresses,phoneNumbers");
+            .person_fields(PERSON_FIELDS_GET);
 
         for resource_name in resource_names {
             builder = builder.add_resource_names(resource_name);
