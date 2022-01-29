@@ -244,7 +244,10 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         OutputType::GPpl => {
             let auth =
                 GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
-            GPpl::new(&args.group, auth).await?.people_sync(users).await?;
+            GPpl::new(&args.group, auth, args.dry_run)
+                .await?
+                .people_sync(users)
+                .await?;
         }
     }
 

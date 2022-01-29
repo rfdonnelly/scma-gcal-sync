@@ -38,6 +38,7 @@ pub struct GPpl {
     hub: PeopleService,
     /// The unique identifer for the ContactGroup assigned by the People API
     group_resource_name: String,
+    dry_run: bool,
 }
 
 #[derive(Debug)]
@@ -48,7 +49,11 @@ struct PersonSyncOpsResult {
 }
 
 impl GPpl {
-    pub async fn new(group_name: &str, auth: GAuth) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(
+        group_name: &str,
+        auth: GAuth,
+        dry_run: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
         let group_resource_name =
             Self::contact_groups_get_or_create_by_name(&hub, group_name).await?;
@@ -56,6 +61,7 @@ impl GPpl {
         Ok(Self {
             hub,
             group_resource_name,
+            dry_run,
         })
     }
 
@@ -316,16 +322,19 @@ impl GPpl {
                 contacts: Some(contacts),
                 ..Default::default()
             };
-            info!(req=%serde_json::to_string(&req)?);
-            let (rsp, batch_create_contacts) = self
-                .hub
-                .people()
-                .batch_create_contacts(req)
-                .add_scope(SCOPE)
-                .doit()
-                .await?;
-            trace!(?rsp);
-            debug!(?batch_create_contacts);
+            // FIXME: remove
+            // info!(req=%serde_json::to_string(&req)?);
+            if !self.dry_run {
+                let (rsp, batch_create_contacts) = self
+                    .hub
+                    .people()
+                    .batch_create_contacts(req)
+                    .add_scope(SCOPE)
+                    .doit()
+                    .await?;
+                trace!(?rsp);
+                debug!(?batch_create_contacts);
+            }
         }
 
         Ok(())
