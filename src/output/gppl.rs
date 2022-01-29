@@ -458,7 +458,11 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         value: Some(trip_leader_status),
         ..Default::default()
     };
-    let position = user.position.as_ref().map(|position| position.to_string()).unwrap_or_else(|| "n/a".to_string());
+    let position = user
+        .position
+        .as_ref()
+        .map(|position| position.to_string())
+        .unwrap_or_else(|| "n/a".to_string());
     let position = api::UserDefined {
         key: Some("SCMA Position".to_string()),
         value: Some(position),
