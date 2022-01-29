@@ -40,11 +40,11 @@ pub struct GPpl {
     group_resource_name: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 struct PersonSyncOpsResult {
     inserts: Vec<User>,
-    updates: Vec<(User, Person)>,
-    deletes: Vec<Person>,
+    updates: Vec<(User, PersonWrapper)>,
+    deletes: Vec<PersonWrapper>,
 }
 
 impl GPpl {
@@ -98,7 +98,7 @@ impl GPpl {
         info!(count=%updates.len(), "Updating people");
         // TODO ...
 
-        let deletes: Vec<_> = ops.deletes.iter().map(Person::name_email).collect();
+        let deletes: Vec<_> = ops.deletes.iter().map(PersonWrapper::name_email).collect();
         info!(count=%deletes.len(), ?deletes, "Deleting people");
         // TODO ...
 
@@ -204,7 +204,7 @@ impl GPpl {
     async fn people_batch_get(
         &self,
         resource_names: &[String],
-    ) -> Result<Vec<Person>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<PersonWrapper>, Box<dyn std::error::Error>> {
         let mut people = Vec::new();
         let mut lower = 0;
         let mut upper = PEOPLE_BATCH_GET_MAX_CONTACTS.min(resource_names.len());
@@ -262,7 +262,7 @@ impl GPpl {
             .collect();
 
         let people = people
-            .iter()
+            .into_iter()
             .map(|person| {
                 let resource_name = person.resource_name.as_ref().unwrap().clone();
                 let name = person
@@ -284,19 +284,11 @@ impl GPpl {
                     }
                     None => None,
                 };
-                let phone_number = match person.phone_numbers.as_ref() {
-                    Some(phone_numbers) => {
-                        let phone_number = phone_numbers.iter().next().unwrap();
-                        let phone_number = phone_number.canonical_form.as_ref().unwrap().clone();
-                        Some(phone_number)
-                    }
-                    None => None,
-                };
-                Person {
+                PersonWrapper {
                     resource_name,
                     name,
                     email,
-                    phone_number,
+                    person,
                 }
             })
             .collect();
@@ -342,12 +334,12 @@ impl GPpl {
     /// People w/o an email are ignored.
     ///
     /// This effectively performs a diff from People to Users.
-    fn people_sync_ops(users: Vec<User>, people: Vec<Person>) -> PersonSyncOpsResult {
+    fn people_sync_ops(users: Vec<User>, people: Vec<PersonWrapper>) -> PersonSyncOpsResult {
         let mut users: HashMap<String, User> = users
             .into_iter()
             .map(|user| (user.email.clone(), user))
             .collect();
-        let mut people: HashMap<String, Person> = people
+        let mut people: HashMap<String, PersonWrapper> = people
             .into_iter()
             .filter_map(|person| {
                 if let Some(ref email) = person.email {
@@ -392,21 +384,17 @@ impl GPpl {
 
         ops
     }
-
-    async fn people_patch_or_create(&self, user: User) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
 }
 
-#[derive(Debug, Default, PartialOrd, Ord, PartialEq, Eq, Clone)]
-struct Person {
+#[derive(Debug, Default, Clone)]
+struct PersonWrapper {
     resource_name: String,
     name: String,
     email: Option<String>,
-    phone_number: Option<String>,
+    person: api::Person,
 }
 
-impl Person {
+impl PersonWrapper {
     fn name_email(&self) -> String {
         match &self.email {
             Some(email) => format!("{} <{}>", self.name, email),
@@ -479,7 +467,20 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
 mod test {
     use super::*;
 
-    use tap::prelude::*;
+    impl PartialEq for PersonSyncOpsResult {
+        fn eq(&self, other: &Self) -> bool {
+            self.inserts == other.inserts
+                && self.updates == other.updates
+                && self.deletes == other.deletes
+        }
+    }
+
+    impl PartialEq for PersonWrapper {
+        fn eq(&self, other: &Self) -> bool {
+            self.name == other.name
+                && self.email == other.email
+        }
+    }
 
     #[test]
     fn people_sync_ops() {
@@ -497,23 +498,19 @@ mod test {
         ];
 
         let people = vec![
-            Person {
+            PersonWrapper {
                 name: "User 1".to_string(),
                 email: Some("user1@example.com".to_string()),
                 ..Default::default()
             },
-            Person {
+            PersonWrapper {
                 name: "User 2".to_string(),
                 email: Some("user2@example.com".to_string()),
                 ..Default::default()
             },
         ];
 
-        let actual = GPpl::people_sync_ops(users, people).tap_mut(|ops| {
-            ops.inserts.sort();
-            ops.updates.sort();
-            ops.deletes.sort();
-        });
+        let actual = GPpl::people_sync_ops(users, people);
         let expected = PersonSyncOpsResult {
             inserts: vec![User {
                 name: "User 0".to_string(),
@@ -526,13 +523,13 @@ mod test {
                     email: "user1@example.com".to_string(),
                     ..Default::default()
                 },
-                Person {
+                PersonWrapper {
                     name: "User 1".to_string(),
                     email: Some("user1@example.com".to_string()),
                     ..Default::default()
                 },
             )],
-            deletes: vec![Person {
+            deletes: vec![PersonWrapper {
                 name: "User 2".to_string(),
                 email: Some("user2@example.com".to_string()),
                 ..Default::default()
