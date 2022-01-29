@@ -77,15 +77,15 @@ impl GPpl {
         info!(user_count = users.len(), "Determining sync operations");
         let ops = Self::people_sync_ops(users, members);
         info!(
-            insert_count = ops.inserts.len(),
-            update_count = ops.updates.len(),
-            delete_count = ops.deletes.len(),
+            inserts = ops.inserts.len(),
+            updates = ops.updates.len(),
+            deletes = ops.deletes.len(),
             "Determined sync operations"
         );
         trace!(?ops);
 
         let inserts: Vec<_> = ops.inserts.iter().map(User::name_email).collect();
-        info!(count=%inserts.len(), ?inserts, "Inserting people");
+        info!(count=%inserts.len(), "Adding people");
         self.people_batch_create(ops.inserts).await?;
 
         let updates: Vec<_> = ops
@@ -93,7 +93,7 @@ impl GPpl {
             .iter()
             .map(|(user, _person)| user.name_email())
             .collect();
-        info!(count=%updates.len(), ?updates, "Updating people");
+        info!(count=%updates.len(), "Updating people");
         // TODO ...
 
         let deletes: Vec<_> = ops.deletes.iter().map(Person::name_email).collect();
@@ -211,7 +211,12 @@ impl GPpl {
             let (left, _) = resource_names.split_at(upper);
             let (_, chunk) = left.split_at(lower);
 
-            info!("Getting group member details {} to {} of {}", lower, upper, resource_names.len());
+            info!(
+                "Getting group member details {} to {} of {}",
+                lower + 1,
+                upper,
+                resource_names.len()
+            );
             let mut people_page = self.people_batch_get_page(chunk).await?;
             people.append(&mut people_page);
 
@@ -302,11 +307,11 @@ impl GPpl {
         users: Vec<User>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for users_chunk in users.chunks(PEOPLE_BATCH_CREATE_MAX_CONTACTS) {
+            info!(people=?users_chunk.iter().map(User::name_email).collect::<Vec<String>>(), "Adding people");
             let people: Vec<api::Person> = users_chunk
                 .into_iter()
                 .map(|user| create_person(user, &self.group_resource_name))
                 .collect();
-            info!(?people, "Creating people");
             let contacts = people
                 .into_iter()
                 .map(|person| api::ContactToCreate {
