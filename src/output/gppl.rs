@@ -2,6 +2,7 @@ use crate::model::User;
 use crate::GAuth;
 
 use google_people1::{api, PeopleService};
+use tap::prelude::*;
 use tracing::{debug, info, trace};
 
 use std::collections::{HashMap, HashSet};
@@ -15,6 +16,10 @@ const PEOPLE_BATCH_UPDATE_MAX_CONTACTS: usize = 50;
 const GROUP_FIELDS: &str = "name";
 const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
 const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
+
+const SCMA_MEMBER_STATUS_KEY: &str = "SCMA Member Status";
+const SCMA_TRIP_LEADER_STATUS_KEY: &str = "SCMA Trip Leader Status";
+const SCMA_POSITION_KEY: &str = "SCMA Position";
 
 /// Synchronizes SCMA members with Google Contacts using the algorithm below.
 ///
@@ -331,7 +336,7 @@ impl GPpl {
             info!(people=?users_chunk.iter().map(User::name_email).collect::<Vec<String>>(), "Adding people");
             let contacts = users_chunk
                 .iter()
-                .map(|user| create_person(user, &self.group_resource_name))
+                .map(|user| create_api_person(user, &self.group_resource_name))
                 .map(|person| api::ContactToCreate {
                     contact_person: Some(person),
                 })
@@ -457,23 +462,17 @@ impl PersonWrapper {
     ///
     ///   The person-user pair was matched via their email and therefore the email is already as
     ///   desired.
-    fn update(mut self, from: User) -> Self {
-        let dummy_group_resource_name = "";
-        let from = create_person(&from, dummy_group_resource_name);
-
-        let new_phone_number = from.phone_numbers.unwrap().into_iter().next().unwrap();
+    fn update(mut self, user: User) -> Self {
+        let new_phone_number = create_api_phone_number(&user);
         self.person.phone_numbers =
             person_phone_numbers_update_or_insert(new_phone_number, self.person.phone_numbers);
 
-        let new_address = from.addresses.unwrap().into_iter().next().unwrap();
+        let new_address = create_api_address(&user);
         self.person.addresses =
             person_addresses_update_or_insert(new_address, self.person.addresses);
 
-        // TODO: Update
-        //
-        // * member status
-        // * trip leader status
-        // * position
+        self.person.user_defined =
+            person_user_defined_update_or_insert(&user, self.person.user_defined);
 
         self
     }
@@ -515,7 +514,63 @@ impl From<api::Person> for PersonWrapper {
     }
 }
 
-fn create_person(user: &User, group_resource_name: &str) -> api::Person {
+fn create_api_address(user: &User) -> api::Address {
+    api::Address {
+        type_: Some("SCMA".to_string()),
+        formatted_value: Some(user.address()),
+        ..Default::default()
+    }
+}
+
+fn create_api_phone_number(user: &User) -> api::PhoneNumber {
+    api::PhoneNumber {
+        type_: Some("SCMA".to_string()),
+        value: user.phone.clone(),
+        ..Default::default()
+    }
+}
+
+fn create_api_member_status(user: &User) -> api::UserDefined {
+    api::UserDefined {
+        key: Some(SCMA_MEMBER_STATUS_KEY.to_string()),
+        value: Some(user.member_status.to_string()),
+        ..Default::default()
+    }
+}
+
+fn create_api_trip_leader_status(user: &User) -> api::UserDefined {
+    api::UserDefined {
+        key: Some(SCMA_TRIP_LEADER_STATUS_KEY.to_string()),
+        value: Some(user.trip_leader_status()),
+        ..Default::default()
+    }
+}
+
+fn create_api_position(user: &User) -> api::UserDefined {
+    api::UserDefined {
+        key: Some(SCMA_POSITION_KEY.to_string()),
+        value: Some(user.position()),
+        ..Default::default()
+    }
+}
+
+impl User {
+    fn trip_leader_status(&self) -> String {
+        self.trip_leader_status
+            .as_ref()
+            .map(|status| status.to_string())
+            .unwrap_or_else(|| "n/a".to_string())
+    }
+
+    fn position(&self) -> String {
+        self.position
+            .as_ref()
+            .map(|position| position.to_string())
+            .unwrap_or_else(|| "n/a".to_string())
+    }
+}
+
+fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
     let name = api::Name {
         unstructured_name: Some(user.name.clone()),
         ..Default::default()
@@ -525,16 +580,8 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         value: Some(user.email.clone()),
         ..Default::default()
     };
-    let address = api::Address {
-        type_: Some("SCMA".to_string()),
-        formatted_value: Some(user.address()),
-        ..Default::default()
-    };
-    let phone_number = api::PhoneNumber {
-        type_: Some("SCMA".to_string()),
-        value: user.phone.clone(),
-        ..Default::default()
-    };
+    let address = create_api_address(user);
+    let phone_number = create_api_phone_number(user);
     let membership = api::Membership {
         contact_group_membership: Some(api::ContactGroupMembership {
             contact_group_resource_name: Some(group_resource_name.to_string()),
@@ -542,31 +589,9 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         }),
         ..Default::default()
     };
-    let member_status = api::UserDefined {
-        key: Some("SCMA Member Status".to_string()),
-        value: Some(user.member_status.to_string()),
-        ..Default::default()
-    };
-    let trip_leader_status = user
-        .trip_leader_status
-        .as_ref()
-        .map(|status| status.to_string())
-        .unwrap_or_else(|| "n/a".to_string());
-    let trip_leader_status = api::UserDefined {
-        key: Some("SCMA Trip Leader Status".to_string()),
-        value: Some(trip_leader_status),
-        ..Default::default()
-    };
-    let position = user
-        .position
-        .as_ref()
-        .map(|position| position.to_string())
-        .unwrap_or_else(|| "n/a".to_string());
-    let position = api::UserDefined {
-        key: Some("SCMA Position".to_string()),
-        value: Some(position),
-        ..Default::default()
-    };
+    let member_status = create_api_member_status(user);
+    let trip_leader_status = create_api_trip_leader_status(user);
+    let position = create_api_position(user);
 
     api::Person {
         names: Some(vec![name]),
@@ -623,6 +648,46 @@ fn person_addresses_update_or_insert(
             Some(addresses)
         }
     }
+}
+
+// FIXME? HashMap does not preserve order.  To preserve order, an ordered HashMap should be used
+// instead.
+fn person_user_defined_update_or_insert(
+    user: &User,
+    user_defined: Option<Vec<api::UserDefined>>,
+) -> Option<Vec<api::UserDefined>> {
+    let user_defined = match user_defined {
+        Some(user_defined) => user_defined
+            .into_iter()
+            .map(|user_defined| {
+                (
+                    user_defined.key.unwrap_or_default(),
+                    user_defined.value.unwrap_or_default(),
+                )
+            })
+            .collect::<HashMap<_, _>>(),
+        None => HashMap::new(),
+    }
+    .tap_mut(|user_defined| {
+        user_defined.insert(
+            SCMA_MEMBER_STATUS_KEY.to_string(),
+            user.member_status.to_string(),
+        );
+        user_defined.insert(
+            SCMA_TRIP_LEADER_STATUS_KEY.to_string(),
+            user.trip_leader_status(),
+        );
+        user_defined.insert(SCMA_POSITION_KEY.to_string(), user.position());
+    })
+    .into_iter()
+    .map(|(k, v)| api::UserDefined {
+        key: Some(k),
+        value: Some(v),
+        ..Default::default()
+    })
+    .collect();
+
+    Some(user_defined)
 }
 
 #[cfg(test)]
