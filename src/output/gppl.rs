@@ -111,10 +111,7 @@ impl GPpl {
     fn people_batch_update_ops(&self, updates: Vec<(User, PersonWrapper)>) -> Vec<PersonWrapper> {
         updates
             .into_iter()
-            .map(|(user, mut person)| {
-                person.person = person_update(user, person.person);
-                person
-            })
+            .map(|(user, person)| person.update(user))
             .collect()
     }
 
@@ -407,6 +404,63 @@ impl PersonWrapper {
             None => self.name.clone(),
         }
     }
+
+    /// Updates self with user information.
+    ///
+    /// The Google People people.updateContact and people.batchUpdateContacts APIs overwrite the
+    /// fields (and everything below them) specified via the FieldMask.  Because of this, we need to
+    /// first get the fields we want to update then perform a manual merge of existing data and the
+    /// data we want to update (or insert). In other words, we need to perform a read-modify-write.
+    ///
+    /// This function performs the merging of the SCMA User into the Google People Person.
+    ///
+    /// For each merge field, it first attempts to find existing entries by type or key.  If an
+    /// existing entry is found, it's value is overwritten.  If an existing entry is not found, one is
+    /// inserted.
+    ///
+    /// The following information is updated:
+    ///
+    /// * Phone number
+    /// * Address
+    /// * Member status
+    /// * Trip leader status
+    /// * Position
+    ///
+    /// The following information is _not_ updated:
+    ///
+    /// * Membership
+    ///
+    ///   The person was found via their membership to the group_resource_name and
+    ///   therefore their membership is already as desired.
+    ///
+    /// * Name
+    ///
+    ///   Prefer the name in Google Contacts.
+    ///
+    /// * Email
+    ///
+    ///   The person-user pair was matched via their email and therefore the email is already as
+    ///   desired.
+    fn update(mut self, from: User) -> Self {
+        let dummy_group_resource_name = "";
+        let from = create_person(&from, dummy_group_resource_name);
+
+        let new_phone_number = from.phone_numbers.unwrap().into_iter().next().unwrap();
+        self.person.phone_numbers =
+            person_phone_numbers_update_or_insert(new_phone_number, self.person.phone_numbers);
+
+        let new_address = from.addresses.unwrap().into_iter().next().unwrap();
+        self.person.addresses =
+            person_addresses_update_or_insert(new_address, self.person.addresses);
+
+        // TODO: Update
+        //
+        // * member status
+        // * trip leader status
+        // * position
+
+        self
+    }
 }
 
 impl From<api::Person> for PersonWrapper {
@@ -507,67 +561,6 @@ fn create_person(user: &User, group_resource_name: &str) -> api::Person {
         user_defined: Some(vec![member_status, trip_leader_status, position]),
         ..Default::default()
     }
-}
-
-/// Updates any existing person with user information.
-///
-/// The Google People people.updateContact and people.batchUpdateContacts APIs overwrite the
-/// fields (and everything below them) specified via the FieldMask.  Because of this, we need to
-/// first get the fields we want to update then perform a manual merge of existing data and the
-/// data we want to update (or insert).
-///
-/// This function performs this manual merge.
-///
-/// It takes an api::Person (the existing Person) and a User and merges the User information into
-/// the existing Person.
-///
-/// For each merge field, it first attempts to find existing entries by type or key.  If an
-/// existing entry is found, it's value is overwritten.  If an existing entry is not found, one is
-/// inserted.
-///
-/// The following information is updated:
-///
-/// * Phone number
-/// * Address
-/// * Member status
-/// * Trip leader status
-/// * Position
-///
-/// The following information is _not_ updated:
-///
-/// * Membership
-///
-///   The person was found via their membership to the group_resource_name and
-///   therefore their membership is already as desired.
-///
-/// * Name
-///
-///   Prefer the name in Google Contacts.
-///
-/// * Email
-///
-///   The person-user pair was matched via their email and therefore the email is already as
-///   desired.
-fn person_update(from: User, into: api::Person) -> api::Person {
-    let mut into = into;
-
-    let dummy_group_resource_name = "";
-    let from = create_person(&from, dummy_group_resource_name);
-
-    let new_phone_number = from.phone_numbers.unwrap().into_iter().next().unwrap();
-    into.phone_numbers =
-        person_phone_numbers_update_or_insert(new_phone_number, into.phone_numbers);
-
-    let new_address = from.addresses.unwrap().into_iter().next().unwrap();
-    into.addresses = person_addresses_update_or_insert(new_address, into.addresses);
-
-    // TODO: Update
-    //
-    // * member status
-    // * trip leader status
-    // * position
-
-    into
 }
 
 fn person_phone_numbers_update_or_insert(
