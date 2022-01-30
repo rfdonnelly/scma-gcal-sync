@@ -27,7 +27,9 @@ Default path is `client_secret.json`.
 . Create OAuth Client ID credentials
 . Download OAuth Client ID JSON
 . Configure OAuth consent screen
-.. Add `https://wwww.googleapis.com/auth/calendar` scope
+.. Add the following scopes
+*** `https://wwww.googleapis.com/auth/calendar`
+*** `https://wwww.googleapis.com/auth/contacts`
 .. Add email to test users
 
 Google Calendar OAuth token::
