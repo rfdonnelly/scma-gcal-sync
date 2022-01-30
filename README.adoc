@@ -30,7 +30,7 @@ Default path is `client_secret.json`.
 .. Add the following scopes
 *** `https://wwww.googleapis.com/auth/calendar`
 *** `https://wwww.googleapis.com/auth/contacts`
-.. Add email to test users
+.. Publish app but do not verify
 
 Google Calendar OAuth token::
 Obtain on first run of `scma-gcal-sync` with gcal output.
