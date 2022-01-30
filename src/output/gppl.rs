@@ -16,26 +16,42 @@ const GROUP_FIELDS: &str = "name";
 const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
 const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
 
-/// Algorithm
+/// Synchronizes SCMA members with Google Contacts using the algorithm below.
 ///
 /// 1. Find the ContactGroup.resourceName by name using the contactGroups.list API method
+///
 /// 2. Get the ContactGroup.memberResourceNames by ContactGroup.resourceName using the
 ///    contactGroups.get API method (may need to paginate, API doc doesn't set an upper bound)
+///
 /// 3. Get the Person.emailAddresses by Person.resourceName using the people.getBatchGet API method
 ///    (the max is 200, so need to make multiple requests)
-/// 4. Diff user emails with people emails. Determine which need to be added, removed, or updated.
-/// 5. Sync
-///    * Add -- Use the people.batchCreateContacts API method to add.  TODO How should pre-existing
-///      but untagged contacts be handled?  For example, person already exists in user's Google
-///      Contacts but isn't a member of the named ContactGroup.  If we don't account for this, we
-///      will end up adding a duplicate entry.  Do we just let this happen, then rely on Google
-///      Contacts "Merge & fix" feature?
-///    * Remove -- TODO determine the desired action.  Should old members be removed or moved to a
-///      different ContactGroup (e.g. "SCMA Alumni")?  If moved, how do we handle case where membership
-///      lapsed? For now, use the people.batchDeleteContacts API method to remove.
 ///
-///      https://developers.google.com/people/api/rest/v1/people/batchDeleteContacts
-///    * Update -- Use the people.batchUpdateContacts API method to update
+/// 4. Diff user emails with people emails. Determine which need to be added, updated, or removed.
+///
+/// 5. Sync
+///
+///    * Add -- Use the people.batchCreateContacts API method to add.
+///
+///      NOTE: Pre-existing contacts not part of the named ContactGroup will not be accounted for
+///      during synchronization and will therefore be added instead of updated.  The Google
+///      Contacts "Merge & fix" feature can be used to reconcile any duplicate contacts this may
+///      create.
+///
+///    * Update -- Use the people.batchUpdateContacts API method to update.
+///
+///      First, merge SCMA User data with Google People Person obtained by the people.getBatchGet
+///      API. Then, make one or more calls to people.batchUpdateContacts.
+///
+///      TODO?: A update is performed whether an update needs to be performed. This could be
+///      improved by only updating Persons that need an update.
+///
+///    * Remove -- Do nothing.
+///
+///      Currently, nothing is done for Persons that exist in the Google People ContactGroup that
+///      do not or no longer exist in the SCMA.
+///
+///      TODO?: Add an option to delete these contacts using the people.batchDeleteContacts?
+///      TODO?: Move these contacts to a different ContactGroup (e.g. "SCMA Alumni")?
 pub struct GPpl {
     hub: PeopleService,
     /// The unique identifer for the ContactGroup assigned by the People API
@@ -103,7 +119,7 @@ impl GPpl {
 
         let deletes: Vec<_> = ops.deletes.iter().map(PersonWrapper::name_email).collect();
         info!(count=%deletes.len(), ?deletes, "Deleting people");
-        // TODO ...
+        // TODO?
 
         Ok(())
     }
