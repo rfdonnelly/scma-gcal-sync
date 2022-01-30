@@ -83,6 +83,18 @@ Fetch users from the SCMA website and sync them to the Access Control List (ACL)
 
  scma-gcal-sync -d users -u <scma-username> -p <scma-password>
 
+==== YAML to Google Contacts
+
+Reads users from a YAML file and sync them to Google Contacts.
+
+ scma-gcal-sync -d users -i yaml --ifile users.yml -o gppl
+
+==== Web to GCal
+
+Fetch users from the SCMA website and sync them to Google Contacts.
+
+ scma-gcal-sync -d users -u <scma-username> -p <scma-password> -o gppl
+
 == Limitations
 
 Only all-day events are supported.
