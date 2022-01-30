@@ -304,38 +304,7 @@ impl GPpl {
             .unwrap_or_default()
             .into_iter()
             .map(|person_response| person_response.person.unwrap_or_default())
-            .map(|person| {
-                let resource_name = person.resource_name.as_ref().unwrap().clone();
-                let name = person
-                    .names
-                    .as_ref()
-                    .unwrap()
-                    .iter()
-                    .next()
-                    .unwrap()
-                    .display_name
-                    .as_ref()
-                    .unwrap()
-                    .clone();
-                let email = match person.email_addresses.as_ref() {
-                    Some(emails) => {
-                        // Use SCMA email if available otherwise use first email
-                        let find_type = Some("SCMA".to_string());
-                        let find_result = emails.iter().find(|email| email.type_ == find_type);
-                        match find_result {
-                            Some(email) => email.value.clone(),
-                            None => emails.first().unwrap().value.clone(),
-                        }
-                    }
-                    None => None,
-                };
-                PersonWrapper {
-                    resource_name,
-                    name,
-                    email,
-                    person,
-                }
-            })
+            .map(PersonWrapper::from)
             .collect();
 
         Ok(people)
@@ -436,6 +405,42 @@ impl PersonWrapper {
         match &self.email {
             Some(email) => format!("{} <{}>", self.name, email),
             None => self.name.clone(),
+        }
+    }
+}
+
+impl From<api::Person> for PersonWrapper {
+    fn from(person: api::Person) -> Self {
+        let resource_name = person.resource_name.as_ref().unwrap().clone();
+        let name = person
+            .names
+            .as_ref()
+            .unwrap()
+            .iter()
+            .next()
+            .unwrap()
+            .display_name
+            .as_ref()
+            .unwrap()
+            .clone();
+        let email = match person.email_addresses.as_ref() {
+            Some(emails) => {
+                // Use SCMA email if available otherwise use first email
+                let find_type = Some("SCMA".to_string());
+                let find_result = emails.iter().find(|email| email.type_ == find_type);
+                match find_result {
+                    Some(email) => email.value.clone(),
+                    None => emails.first().unwrap().value.clone(),
+                }
+            }
+            None => None,
+        };
+
+        Self {
+            resource_name,
+            name,
+            email,
+            person,
         }
     }
 }
