@@ -280,11 +280,8 @@ impl GPpl {
                 break;
             }
 
-            (lower, upper) = {
-                let lower_next = upper;
-                let upper_next = (upper + PEOPLE_BATCH_GET_MAX_CONTACTS).min(resource_names.len());
-                (lower_next, upper_next)
-            };
+            lower = upper;
+            upper = (lower + PEOPLE_BATCH_GET_MAX_CONTACTS).min(resource_names.len());
         }
 
         Ok(people)
