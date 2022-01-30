@@ -111,7 +111,7 @@ impl GPpl {
         info!(
             inserts = ops.inserts.len(),
             updates = ops.updates.len(),
-            deletes = ops.deletes.len(),
+            ignores = ops.deletes.len(),
             "Determined sync operations"
         );
         trace!(?ops);
@@ -123,9 +123,8 @@ impl GPpl {
         let people = self.people_batch_update_ops(ops.updates);
         self.people_batch_update(people).await?;
 
-        let deletes: Vec<_> = ops.deletes.iter().map(PersonWrapper::name_email).collect();
-        info!(count=%deletes.len(), ?deletes, "Deleting people");
-        // TODO?
+        let ignores: Vec<_> = ops.deletes.iter().map(PersonWrapper::name_email).collect();
+        info!(count=%ignores.len(), ?ignores, "Ignoring people found in Google Contacts but not a current member of the SCMA");
 
         Ok(())
     }
@@ -346,8 +345,6 @@ impl GPpl {
                 contacts: Some(contacts),
                 ..Default::default()
             };
-            // FIXME: remove
-            // info!(req=%serde_json::to_string(&req)?);
             if !self.dry_run {
                 let (rsp, batch_create_contacts) = self
                     .hub
