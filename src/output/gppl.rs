@@ -2,6 +2,7 @@ use crate::model::User;
 use crate::GAuth;
 
 use google_people1::{api, PeopleService};
+use indexmap::IndexMap;
 use tap::prelude::*;
 use tracing::{debug, info, trace};
 
@@ -650,8 +651,6 @@ fn person_addresses_update_or_insert(
     }
 }
 
-// FIXME? HashMap does not preserve order.  To preserve order, an ordered HashMap should be used
-// instead.
 fn person_user_defined_update_or_insert(
     user: &User,
     user_defined: Option<Vec<api::UserDefined>>,
@@ -665,8 +664,8 @@ fn person_user_defined_update_or_insert(
                     user_defined.value.unwrap_or_default(),
                 )
             })
-            .collect::<HashMap<_, _>>(),
-        None => HashMap::new(),
+            .collect::<IndexMap<_, _>>(),
+        None => IndexMap::new(),
     }
     .tap_mut(|user_defined| {
         user_defined.insert(
