@@ -94,16 +94,10 @@ impl GPpl {
         );
         trace!(?ops);
 
-        let inserts: Vec<_> = ops.inserts.iter().map(User::name_email).collect();
-        info!(count=%inserts.len(), "Adding people");
+        info!(count=%ops.inserts.len(), "Adding people");
         self.people_batch_create(ops.inserts).await?;
 
-        let updates: Vec<_> = ops
-            .updates
-            .iter()
-            .map(|(user, _person)| user.name_email())
-            .collect();
-        info!(count=%updates.len(), "Updating people");
+        info!(count=%ops.updates.len(), "Updating people");
         let people = self.people_batch_update_ops(ops.updates);
         self.people_batch_update(people).await?;
 
@@ -141,7 +135,7 @@ impl GPpl {
             };
 
             info!(
-            count=people_chunk.iter().count(),
+            count=people_chunk.len(),
             people=?people_chunk.iter().map(PersonWrapper::name_email).collect::<Vec<String>>(),
             "Updating contacts"
             );
@@ -240,7 +234,7 @@ impl GPpl {
         let (rsp, group) = self
             .hub
             .contact_groups()
-            .get(&group_resource_name)
+            .get(group_resource_name)
             .max_members(CONTACT_GROUPS_GET_MAX_MEMBERS)
             .group_fields(GROUP_FIELDS)
             .add_scope(SCOPE)
@@ -305,15 +299,11 @@ impl GPpl {
         trace!(?rsp);
         debug!(?get_people_response);
 
-        let people: Vec<api::Person> = get_people_response
+        let people = get_people_response
             .responses
             .unwrap_or_default()
-            .iter()
-            .map(|person_response| person_response.person.clone().unwrap_or_default())
-            .collect();
-
-        let people = people
             .into_iter()
+            .map(|person_response| person_response.person.unwrap_or_default())
             .map(|person| {
                 let resource_name = person.resource_name.as_ref().unwrap().clone();
                 let name = person
@@ -357,12 +347,9 @@ impl GPpl {
     ) -> Result<(), Box<dyn std::error::Error>> {
         for users_chunk in users.chunks(PEOPLE_BATCH_CREATE_MAX_CONTACTS) {
             info!(people=?users_chunk.iter().map(User::name_email).collect::<Vec<String>>(), "Adding people");
-            let people: Vec<api::Person> = users_chunk
-                .into_iter()
+            let contacts = users_chunk
+                .iter()
                 .map(|user| create_person(user, &self.group_resource_name))
-                .collect();
-            let contacts = people
-                .into_iter()
                 .map(|person| api::ContactToCreate {
                     contact_person: Some(person),
                 })
@@ -408,22 +395,16 @@ impl GPpl {
             })
             .collect();
 
-        let user_emails: HashSet<String> = users.keys().map(|email| email.clone()).collect();
-        let person_emails: HashSet<String> = people.keys().map(|email| email.clone()).collect();
+        let user_emails: HashSet<String> = HashSet::from_iter(users.keys().cloned());
+        let person_emails: HashSet<String> = HashSet::from_iter(people.keys().cloned());
 
         let inserts: Vec<_> = user_emails
             .difference(&person_emails)
-            .map(|email| {
-                let user = users.remove(&email.to_string()).unwrap();
-                user
-            })
+            .map(|email| users.remove(&email.to_string()).unwrap())
             .collect();
         let deletes: Vec<_> = person_emails
             .difference(&user_emails)
-            .map(|email| {
-                let person = people.remove(&email.to_string()).unwrap();
-                person
-            })
+            .map(|email| people.remove(&email.to_string()).unwrap())
             .collect();
         let updates: Vec<_> = user_emails
             .intersection(&person_emails)
@@ -434,13 +415,11 @@ impl GPpl {
             })
             .collect();
 
-        let ops = PersonSyncOpsResult {
+        PersonSyncOpsResult {
             inserts,
             updates,
             deletes,
-        };
-
-        ops
+        }
     }
 }
 
@@ -646,8 +625,7 @@ mod test {
 
     impl PartialEq for PersonWrapper {
         fn eq(&self, other: &Self) -> bool {
-            self.name == other.name
-                && self.email == other.email
+            self.name == other.name && self.email == other.email
         }
     }
 
