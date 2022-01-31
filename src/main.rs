@@ -35,6 +35,14 @@ enum OutputType {
     Yaml,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+enum AuthType {
+    #[clap(name = "oauth")]
+    OAuth,
+    ServiceAccount,
+    Infer,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum PipeFile {
     Pipe,
@@ -94,6 +102,11 @@ struct Args {
     #[clap(long)]
     all: bool,
 
+    /// The authentication type to use for the Google APIs.
+    #[clap(help_heading = "Google API authentication options")]
+    #[clap(arg_enum, long, default_value = "infer")]
+    auth_type: AuthType,
+
     /// The client secret JSON is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
     ///
@@ -138,6 +151,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+async fn auth_from_args(
+    args: &Args,
+    infer_type: AuthType,
+) -> Result<GAuth, Box<dyn std::error::Error>> {
+    let auth_type = match args.auth_type {
+        AuthType::Infer => infer_type,
+        AuthType::OAuth | AuthType::ServiceAccount => args.auth_type,
+    };
+
+    match auth_type {
+        AuthType::OAuth => {
+            GAuth::with_oauth(&args.client_secret_json_path, &args.oauth_token_json_path).await
+        }
+        AuthType::ServiceAccount => {
+            GAuth::with_service_account(&args.client_secret_json_path).await
+        }
+        AuthType::Infer => unreachable!("Due to match above"),
+    }
+}
+
 async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let dates = if args.all {
         DateSelect::All
@@ -150,8 +183,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             // Handle this case specially to maximize concurrency
             //
             // I've found it difficult to do this in a more general fashion.
-            let auth =
-                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+            let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
 
             let ((web, events), gcal) = tokio::try_join!(
                 web_events(&args.username, &args.password, dates),
@@ -176,7 +208,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     info!(input=?args.input_file, "Reading events");
                     let events_yaml = match args.input_file {
                         PipeFile::Pipe => todo!(),
-                        PipeFile::File(path) => std::fs::read_to_string(&path)?,
+                        PipeFile::File(ref path) => std::fs::read_to_string(path)?,
                     };
                     serde_yaml::from_str(&events_yaml)?
                 }
@@ -184,9 +216,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
             match args.output {
                 OutputType::GCal => {
-                    let auth =
-                        GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path)
-                            .await?;
+                    let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
                     GCal::new(&args.calendar, auth, args.dry_run)
                         .await?
                         .write(&events)
@@ -224,7 +254,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             info!(input=?args.input_file, "Reading users");
             let users_yaml = match args.input_file {
                 PipeFile::Pipe => todo!(),
-                PipeFile::File(path) => std::fs::read_to_string(&path)?,
+                PipeFile::File(ref path) => std::fs::read_to_string(path)?,
             };
             serde_yaml::from_str(&users_yaml)?
         }
@@ -234,8 +264,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         OutputType::GCal => {
             let emails: Vec<&str> = users.iter().map(|user| user.email.as_ref()).collect();
 
-            let auth =
-                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+            let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
             GCal::new(&args.calendar, auth, args.dry_run)
                 .await?
                 .acl_sync(&emails)
@@ -249,8 +278,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         OutputType::GPpl => {
-            let auth =
-                GAuth::new(&args.client_secret_json_path, &args.oauth_token_json_path).await?;
+            let auth = auth_from_args(&args, AuthType::OAuth).await?;
             GPpl::new(&args.group, auth, args.dry_run)
                 .await?
                 .people_sync(users)
