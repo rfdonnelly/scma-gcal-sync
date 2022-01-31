@@ -21,6 +21,7 @@ pub enum AclSyncOp {
     Delete(String),
 }
 
+const CALENDAR_DESCRIPTION: &str = "This calendar is synced daily with the SCMA event calendar (https://www.rockclimbing.org/index.php/event-list/events-list) by scma-gcal-sync (https://github.com/rfdonnelly/scma-gcal-sync).";
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
 /// The number of concurrent ACL insert/delete requests to make.  Experienced rate limiting with a
@@ -90,6 +91,7 @@ impl GCal {
 
                 let req = api::Calendar {
                     summary: Some(calendar_name.to_string()),
+                    description: Some(CALENDAR_DESCRIPTION.to_string()),
                     ..Default::default()
                 };
                 let (rsp, calendar) = hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
