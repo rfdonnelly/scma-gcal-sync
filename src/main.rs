@@ -119,7 +119,7 @@ struct Args {
     #[clap(
         long,
         default_value = "client_secret.json",
-        env = "GCAL_CLIENT_SECRET_PATH"
+        env = "GOOGLE_CLIENT_SECRET_PATH"
     )]
     client_secret_json_path: String,
     /// The token JSON file is created, written, and read by the application to persist the
@@ -127,7 +127,11 @@ struct Args {
     ///
     /// This is used for the oauth --auth-type only.
     #[clap(help_heading = "Google API authentication options")]
-    #[clap(long, default_value = "token.json", env = "GCAL_OAUTH_TOKEN_JSON_PATH")]
+    #[clap(
+        long,
+        default_value = "token.json",
+        env = "GOOGLE_OAUTH_TOKEN_JSON_PATH"
+    )]
     oauth_token_json_path: String,
 
     /// The name of the Google Calendar to sync to.
