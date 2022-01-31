@@ -80,14 +80,17 @@ struct Args {
     output_file: PipeFile,
 
     /// Username for the SCMA website (https://rockclimbing.org).
+    #[clap(help_heading = "Web input options")]
     #[clap(short, long, default_value = "", env = "SCMA_USERNAME")]
     username: String,
     /// Password for the SCMA website (https://rockclimbing.org).
+    #[clap(help_heading = "Web input options")]
     #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
     /// Include past events. Without this option, only present (in-progress) and future events will
     /// be sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
     /// applicable to the web input.
+    #[clap(help_heading = "Web input options")]
     #[clap(long)]
     all: bool,
 
@@ -95,6 +98,7 @@ struct Args {
     /// (https://console.developers.google.com).
     ///
     /// This file contains JSON like '{"installed":{"client_id": ... }}'.
+    #[clap(help_heading = "Google API authentication options")]
     #[clap(
         long,
         default_value = "client_secret.json",
@@ -103,14 +107,17 @@ struct Args {
     client_secret_json_path: String,
     /// The token JSON file is created, written, and read by the application to persist the
     /// authentication token.
+    #[clap(help_heading = "Google API authentication options")]
     #[clap(long, default_value = "token.json", env = "GCAL_OAUTH_TOKEN_JSON_PATH")]
     oauth_token_json_path: String,
 
     /// The name of the Google Calendar to sync to.
+    #[clap(help_heading = "Google Calendar output options")]
     #[clap(short, long, default_value = "SCMA")]
     calendar: String,
 
     /// The name of the Google Contacts label to use.
+    #[clap(help_heading = "Google People output options")]
     #[clap(long, default_value = "SCMA")]
     group: String,
 }
