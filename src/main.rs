@@ -110,7 +110,11 @@ struct Args {
     /// The client secret JSON is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
     ///
-    /// This file contains JSON like '{"installed":{"client_id": ... }}'.
+    /// This is used for both the oauth and service-account --auth-types.
+    ///
+    /// The oauth --auth-type JSON looks like: '{"installed":{"client_id": ... }}'.
+    ///
+    /// The service-account --auth-type JSON looks like: '{"type": "service_account", "project_id": ...}'.
     #[clap(help_heading = "Google API authentication options")]
     #[clap(
         long,
@@ -120,6 +124,8 @@ struct Args {
     client_secret_json_path: String,
     /// The token JSON file is created, written, and read by the application to persist the
     /// authentication token.
+    ///
+    /// This is used for the oauth --auth-type only.
     #[clap(help_heading = "Google API authentication options")]
     #[clap(long, default_value = "token.json", env = "GCAL_OAUTH_TOKEN_JSON_PATH")]
     oauth_token_json_path: String,
