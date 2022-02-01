@@ -160,6 +160,16 @@ struct Args {
     #[clap(short, long, default_value = "SCMA")]
     calendar: String,
 
+    /// Add a user (by email address) as a co-owner of the calendar.
+    ///
+    /// Use multiple times to specify multiple owners. Useful when using service account
+    /// authentication to allow a non-service account to administer the calendar.
+    ///
+    /// Example: --calendar-owner owner1@example.com --calendar-owner owner2@example.com
+    #[clap(help_heading = "Google Calendar output options")]
+    #[clap(long = "calendar-owner")]
+    calendar_owners: Vec<String>,
+
     /// Disables sending an email notification on ACL insert
     #[clap(help_heading = "Google Calendar output options")]
     #[clap(arg_enum, long, default_value = "false")]
@@ -225,6 +235,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 web_events(&args.username, &args.password, dates),
                 GCal::new(
                     &args.calendar,
+                    &args.calendar_owners,
                     auth,
                     args.dry_run,
                     args.notify_acl_insert.into()
@@ -260,6 +271,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
                     GCal::new(
                         &args.calendar,
+                        &args.calendar_owners,
                         auth,
                         args.dry_run,
                         args.notify_acl_insert.into(),
@@ -313,6 +325,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
             GCal::new(
                 &args.calendar,
+                &args.calendar_owners,
                 auth,
                 args.dry_run,
                 args.notify_acl_insert.into(),

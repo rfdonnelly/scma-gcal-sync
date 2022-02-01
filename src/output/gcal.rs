@@ -22,6 +22,22 @@ pub enum AclSyncOp {
     Delete(String),
 }
 
+// To enable named argument
+#[derive(Clone, Copy)]
+struct SendNotifications(bool);
+
+impl From<SendNotifications> for bool {
+    fn from(s: SendNotifications) -> bool {
+        s.0
+    }
+}
+
+impl From<bool> for SendNotifications {
+    fn from(b: bool) -> Self {
+        Self(b)
+    }
+}
+
 const CALENDAR_DESCRIPTION: &str = "This calendar is synced daily with the SCMA event calendar (https://www.rockclimbing.org/index.php/event-list/events-list) by scma-gcal-sync (https://github.com/rfdonnelly/scma-gcal-sync).";
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
@@ -33,6 +49,7 @@ const SCOPE: api::Scope = api::Scope::Full;
 impl GCal {
     pub async fn new(
         calendar_name: &str,
+        calendar_owners: &[String],
         auth: GAuth,
         dry_run: bool,
         notify_acl_insert: bool,
@@ -47,6 +64,12 @@ impl GCal {
             dry_run,
             notify_acl_insert,
         };
+
+        for calendar_owner in calendar_owners {
+            gcal.acl_insert(calendar_owner, "owner", SendNotifications(false))
+                .await?;
+        }
+
         Ok(gcal)
     }
 
@@ -131,7 +154,10 @@ impl GCal {
 
     async fn acl_insert_or_delete(&self, op: AclSyncOp) -> Result<(), Box<dyn std::error::Error>> {
         match op {
-            AclSyncOp::Insert(email) => self.acl_insert(&email, "reader").await?,
+            AclSyncOp::Insert(email) => {
+                self.acl_insert(&email, "reader", self.notify_acl_insert.into())
+                    .await?
+            }
             AclSyncOp::Delete(email) => self.acl_delete(&email).await?,
         }
 
@@ -188,8 +214,13 @@ impl GCal {
         ops
     }
 
-    async fn acl_insert(&self, email: &str, role: &str) -> Result<(), Box<dyn std::error::Error>> {
-        info!(%email, "Adding user");
+    async fn acl_insert(
+        &self,
+        email: &str,
+        role: &str,
+        send_notifications: SendNotifications,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!(%email, %role, send_notifications=%bool::from(send_notifications), "Adding user");
 
         let req = api::AclRule {
             role: Some(role.to_string()),
@@ -204,7 +235,7 @@ impl GCal {
                 .hub
                 .acl()
                 .insert(req, &self.calendar_id)
-                .send_notifications(self.notify_acl_insert)
+                .send_notifications(send_notifications.into())
                 .doit()
                 .await?;
             trace!(?rsp, "acl.insert");
