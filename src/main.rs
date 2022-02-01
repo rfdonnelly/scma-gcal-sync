@@ -81,8 +81,6 @@ impl From<Boolean> for bool {
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct Args {
     /// Disables Google API methods that create, modify, or delete.
-    ///
-    /// NOTE: Does not disable creation of non-existent Calendar or ContactGroup.
     #[clap(short = 'n', long)]
     dry_run: bool,
 

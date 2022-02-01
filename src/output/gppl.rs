@@ -80,7 +80,7 @@ impl GPpl {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
         let group_resource_name =
-            Self::contact_groups_get_or_create_by_name(&hub, group_name).await?;
+            Self::contact_groups_get_or_create_by_name(&hub, group_name, dry_run).await?;
 
         Ok(Self {
             hub,
@@ -192,6 +192,7 @@ impl GPpl {
     async fn contact_groups_get_or_create_by_name(
         hub: &PeopleService,
         group_name: &str,
+        dry_run: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {
         info!(%group_name, "Finding group");
         let (rsp, list) = hub
@@ -218,23 +219,28 @@ impl GPpl {
             None => {
                 info!(%group_name, "Contact group not found, creating new contact group");
 
-                let req = api::CreateContactGroupRequest {
-                    contact_group: Some(api::ContactGroup {
-                        name: Some(group_name.to_string()),
-                        ..Default::default()
-                    }),
-                    read_group_fields: Some(GROUP_FIELDS.to_string()),
-                };
-                let (rsp, group) = hub
-                    .contact_groups()
-                    .create(req)
-                    .add_scope(SCOPE)
-                    .doit()
-                    .await?;
-                trace!(?rsp, "contact_groups.create");
-                debug!(?group, "contact_groups.create");
+                let group_resource_name = if dry_run {
+                    return Err("Cannot create contact group during dry run".into());
+                } else {
+                    let req = api::CreateContactGroupRequest {
+                        contact_group: Some(api::ContactGroup {
+                            name: Some(group_name.to_string()),
+                            ..Default::default()
+                        }),
+                        read_group_fields: Some(GROUP_FIELDS.to_string()),
+                    };
+                    let (rsp, group) = hub
+                        .contact_groups()
+                        .create(req)
+                        .add_scope(SCOPE)
+                        .doit()
+                        .await?;
+                    trace!(?rsp, "contact_groups.create");
+                    debug!(?group, "contact_groups.create");
 
-                let group_resource_name = group.resource_name.as_ref().unwrap().clone();
+                    group.resource_name.as_ref().unwrap().clone()
+                };
+
                 info!(%group_name, %group_resource_name, "Created new contact group");
 
                 group_resource_name

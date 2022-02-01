@@ -38,7 +38,8 @@ impl GCal {
         notify_acl_insert: bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
-        let calendar_id = Self::calendars_get_or_insert_by_name(&hub, calendar_name).await?;
+        let calendar_id =
+            Self::calendars_get_or_insert_by_name(&hub, calendar_name, dry_run).await?;
 
         let gcal = Self {
             calendar_id,
@@ -68,6 +69,7 @@ impl GCal {
     async fn calendars_get_or_insert_by_name(
         hub: &CalendarHub,
         calendar_name: &str,
+        dry_run: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {
         info!(%calendar_name, "Finding calendar");
         let (rsp, list) = hub.calendar_list().list().add_scope(SCOPE).doit().await?;
@@ -88,16 +90,22 @@ impl GCal {
             None => {
                 info!(%calendar_name, "Calendar not found, inserting new calendar");
 
-                let req = api::Calendar {
-                    summary: Some(calendar_name.to_string()),
-                    description: Some(CALENDAR_DESCRIPTION.to_string()),
-                    ..Default::default()
-                };
-                let (rsp, calendar) = hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
-                trace!(?rsp, "calendars.insert");
-                debug!(?calendar, "calendars.insert");
+                let calendar_id = if dry_run {
+                    return Err("Cannot create calendar during dry run".into());
+                } else {
+                    let req = api::Calendar {
+                        summary: Some(calendar_name.to_string()),
+                        description: Some(CALENDAR_DESCRIPTION.to_string()),
+                        ..Default::default()
+                    };
+                    let (rsp, calendar) =
+                        hub.calendars().insert(req).add_scope(SCOPE).doit().await?;
+                    trace!(?rsp, "calendars.insert");
+                    debug!(?calendar, "calendars.insert");
 
-                let calendar_id = calendar.id.as_ref().unwrap().clone();
+                    calendar.id.as_ref().unwrap().clone()
+                };
+
                 info!(%calendar_name, %calendar_id, "Inserted new calendar");
 
                 calendar_id
