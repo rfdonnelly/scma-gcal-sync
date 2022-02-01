@@ -61,6 +61,21 @@ impl From<&str> for PipeFile {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+enum Boolean {
+    True,
+    False,
+}
+
+impl From<Boolean> for bool {
+    fn from(b: Boolean) -> Self {
+        match b {
+            Boolean::True => true,
+            Boolean::False => false,
+        }
+    }
+}
+
 #[derive(Parser)]
 #[clap(about, version, author)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
@@ -139,6 +154,11 @@ struct Args {
     #[clap(short, long, default_value = "SCMA")]
     calendar: String,
 
+    /// Disables sending an email notification on ACL insert
+    #[clap(help_heading = "Google Calendar output options")]
+    #[clap(arg_enum, long, default_value = "false")]
+    notify_acl_insert: Boolean,
+
     /// The name of the Google Contacts label to use.
     #[clap(help_heading = "Google People output options")]
     #[clap(long, default_value = "SCMA")]
@@ -197,7 +217,12 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
             let ((web, events), gcal) = tokio::try_join!(
                 web_events(&args.username, &args.password, dates),
-                GCal::new(&args.calendar, auth, args.dry_run),
+                GCal::new(
+                    &args.calendar,
+                    auth,
+                    args.dry_run,
+                    args.notify_acl_insert.into()
+                ),
             )?;
 
             stream::iter(events)
@@ -227,10 +252,15 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             match args.output {
                 OutputType::GCal => {
                     let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
-                    GCal::new(&args.calendar, auth, args.dry_run)
-                        .await?
-                        .write(&events)
-                        .await?;
+                    GCal::new(
+                        &args.calendar,
+                        auth,
+                        args.dry_run,
+                        args.notify_acl_insert.into(),
+                    )
+                    .await?
+                    .write(&events)
+                    .await?;
                 }
                 OutputType::Yaml => {
                     info!(output=?args.output_file, "Writing events");
@@ -275,10 +305,15 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             let emails: Vec<&str> = users.iter().map(|user| user.email.as_ref()).collect();
 
             let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
-            GCal::new(&args.calendar, auth, args.dry_run)
-                .await?
-                .acl_sync(&emails)
-                .await?;
+            GCal::new(
+                &args.calendar,
+                auth,
+                args.dry_run,
+                args.notify_acl_insert.into(),
+            )
+            .await?
+            .acl_sync(&emails)
+            .await?;
         }
         OutputType::Yaml => {
             info!(output=?args.output_file, "Writing users");

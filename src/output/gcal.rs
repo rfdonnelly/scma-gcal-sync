@@ -13,6 +13,7 @@ pub struct GCal {
     calendar_id: String,
     hub: CalendarHub,
     dry_run: bool,
+    notify_acl_insert: bool,
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
@@ -29,15 +30,12 @@ const CONCURRENT_REQUESTS: usize = 3;
 const CONCURRENT_REQUESTS_ACL: usize = 1;
 const SCOPE: api::Scope = api::Scope::Full;
 
-/// NOTE: if this is false, users will not be able to add the calendar unless they the calendar ID
-/// or a a link to the calendar.
-const SEND_NOTIFICATIONS_ACL_INSERT: bool = false;
-
 impl GCal {
     pub async fn new(
         calendar_name: &str,
         auth: GAuth,
         dry_run: bool,
+        notify_acl_insert: bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let hub = Self::create_hub(auth).await?;
         let calendar_id = Self::calendars_get_or_insert_by_name(&hub, calendar_name).await?;
@@ -46,6 +44,7 @@ impl GCal {
             calendar_id,
             hub,
             dry_run,
+            notify_acl_insert,
         };
         Ok(gcal)
     }
@@ -197,7 +196,7 @@ impl GCal {
                 .hub
                 .acl()
                 .insert(req, &self.calendar_id)
-                .send_notifications(SEND_NOTIFICATIONS_ACL_INSERT)
+                .send_notifications(self.notify_acl_insert)
                 .doit()
                 .await?;
             trace!(?rsp, "acl.insert");
