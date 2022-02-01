@@ -143,6 +143,8 @@ impl GCal {
         let acls = self.acl_list().await?;
         let ops = Self::acl_sync_ops(emails, &acls);
 
+        info!(ops.len=%ops.len(), ?ops, "Determined sync operations");
+
         stream::iter(ops)
             .map(|op| self.acl_insert_or_delete(op))
             .buffer_unordered(CONCURRENT_REQUESTS_ACL)
@@ -209,7 +211,6 @@ impl GCal {
             .difference(&emails)
             .map(|email| AclSyncOp::Delete(email.to_string()));
         let ops: Vec<AclSyncOp> = inserts.chain(deletes).collect();
-        info!(?ops);
 
         ops
     }
