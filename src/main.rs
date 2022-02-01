@@ -110,42 +110,50 @@ struct Args {
     #[clap(help_heading = "Web input options")]
     #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
-    /// Include past events. Without this option, only present (in-progress) and future events will
-    /// be sync'd.  With this option, all events (past, present, and future) will be sync'd.  Only
-    /// applicable to the web input.
+    /// Includes past events.
+    ///
+    /// Without this option, only in-progress and future events will be sync'd.  With this option,
+    /// all events (past, in-progress, and future) will be sync'd.
     #[clap(help_heading = "Web input options")]
     #[clap(long)]
     all: bool,
 
     /// The authentication type to use for the Google APIs.
+    ///
+    /// The Google Calendar output infers `--auth-type service-account`.  The Google People output
+    /// infers `--auth-type oauth`.
     #[clap(help_heading = "Google API authentication options")]
     #[clap(arg_enum, long, default_value = "infer")]
     auth_type: AuthType,
 
-    /// The client secret JSON is downloaded by the user from the Google API console
+    /// Path to the JSON file that contains the client secret.
+    ///
+    /// This file is downloaded by the user from the Google API console
     /// (https://console.developers.google.com).
     ///
-    /// This is used for both the oauth and service-account --auth-types.
+    /// This is used for both the `--auth-type oauth` and `--auth-type service-account`.
     ///
-    /// The oauth --auth-type JSON looks like: '{"installed":{"client_id": ... }}'.
+    /// The `--auth-type oauth` JSON looks like: `{"installed":{"client_id": ... }}`.
     ///
-    /// The service-account --auth-type JSON looks like: '{"type": "service_account", "project_id": ...}'.
+    /// The `--auth-type service-account` JSON looks like: `{"type": "service_account", "project_id": ...}`.
     #[clap(help_heading = "Google API authentication options")]
     #[clap(
-        long,
-        default_value = "client_secret.json",
+        long = "secret-file",
+        default_value = "secret.json",
         env = "GOOGLE_CLIENT_SECRET_PATH"
     )]
     client_secret_json_path: String,
-    /// The token JSON file is created, written, and read by the application to persist the
-    /// authentication token.
+
+    /// Path to the JSON file used to persist the OAuth tokens.
+    ///
+    /// This file is fully managed (created, written, and read) by the application.
     ///
     /// This is used for the oauth --auth-type only.
     #[clap(help_heading = "Google API authentication options")]
     #[clap(
-        long,
+        long = "token-file",
         default_value = "token.json",
-        env = "GOOGLE_OAUTH_TOKEN_JSON_PATH"
+        env = "GOOGLE_OAUTH_TOKEN_PATH"
     )]
     oauth_token_json_path: String,
 
