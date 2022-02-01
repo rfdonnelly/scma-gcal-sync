@@ -21,8 +21,8 @@ To access the calendar you must:
 
 * Be an SCMA member
 * Have your SCMA email address linked to a Google account
-* Opened Google Calendar at least once while signed in to your Google account
-* Wait up to 48 hours for access after changing your SCMA email address
+* Have opened Google Calendar at least once while signed in to the Google account linked to your SCMA email address
+* Wait up to 24 hours for access after changing your SCMA email address
 
 == Documentation
 
