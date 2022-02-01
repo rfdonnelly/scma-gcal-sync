@@ -85,8 +85,8 @@ struct Args {
     dry_run: bool,
 
     /// The data type to operate on.
-    #[clap(arg_enum, short, long, default_value = "events")]
-    data: DataType,
+    #[clap(arg_enum, default_value = "events")]
+    data_type: DataType,
 
     #[clap(arg_enum, short, long, default_value = "web")]
     input: InputType,
@@ -181,7 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    match args.data {
+    match args.data_type {
         DataType::Events => process_events(args).await,
         DataType::Users => process_users(args).await,
     }
