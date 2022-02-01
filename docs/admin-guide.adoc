@@ -7,9 +7,9 @@ This guide documents the use of `scma-gcal-sync` to maintain a Google Calendar f
 . Create a Google Cloud Platform (GCP) project.
 . Add the following APIs
 ** Google Calendar API
-* Setup service account authentication
-... Create a service account
-... Download the service account JSON
+. Setup service account authentication
+.. Create a service account
+.. Download the service account JSON
 
 == Initial Sync
 
