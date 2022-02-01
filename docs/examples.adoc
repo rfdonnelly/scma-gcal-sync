@@ -1,0 +1,58 @@
+= Examples
+
+== Events
+
+The following examples operate on events.
+
+=== Web to YAML
+
+Fetch events from the SCMA website and converts them to YAML.
+
+ scma-gcal-sync events -u <scma-username> -p <scma-password> -o yaml > events.yml
+
+=== YAML to GCal
+
+Read events from a YAML file and sync them to Google Calendar.
+
+ scma-gcal-sync events -i yaml --ifile events.yml
+
+=== Web to GCAL
+
+Fetch events from the SCMA website and sync them to Google Calendar.
+
+ scma-gcal-sync events -u <scma-username> -p <scma-password>
+
+== Users
+
+The following examples operate on users.
+
+=== Web to YAML
+
+Fetch users from the SCMA website and converts them to YAML.
+
+ scma-gcal-sync users -u <scma-username> -p <scma-password> -o yaml > users.yml
+
+=== YAML to GCal
+
+Read users from a YAML file and sync them to the Access Control List (ACL) for Google Calendar.
+
+ scma-gcal-sync users -i yaml --ifile users.yml
+
+=== Web to GCal
+
+Fetch users from the SCMA website and sync them to the Access Control List (ACL) for Google Calendar.
+
+ scma-gcal-sync users -u <scma-username> -p <scma-password>
+
+=== YAML to Google Contacts
+
+Reads users from a YAML file and sync them to Google Contacts.
+
+ scma-gcal-sync users -i yaml --ifile users.yml -o gppl
+
+=== Web to GCal
+
+Fetch users from the SCMA website and sync them to Google Contacts.
+
+ scma-gcal-sync users -u <scma-username> -p <scma-password> -o gppl
+

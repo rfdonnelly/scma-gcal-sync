@@ -8,94 +8,11 @@ Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Asso
 [link=https://asciinema.org/a/3jH3c0B7XrRf1gimik3AkOJYY]
 image::https://asciinema.org/a/3jH3c0B7XrRf1gimik3AkOJYY.svg[asciicast]
 
-== Credentials
+== Documentation
 
-SCMA website username::
-Specified via the `SCMA_USERNAME` environment variable or the `-u|--username` option.
-
-SCMA website password::
-Specified via the `SCMA_PASSWORD` environment variable or the `-p|--password` option.
-
-Google Calendar client secret::
-Obtain OAuth client ID credentials via the link:https://console.developers.google.com[Google Developer Console].
-Stored as a JSON file.
-Path to JSON file specified via the `GCAL_CLIENT_SECRET_PATH` environment variable or the `--client-secret-json-path` option.
-Default path is `client_secret.json`.
-+
-. Create a project
-. Add Google Calendar API
-. Create OAuth Client ID credentials
-. Download OAuth Client ID JSON
-. Configure OAuth consent screen
-.. Add the following scopes
-*** `https://wwww.googleapis.com/auth/calendar`
-*** `https://wwww.googleapis.com/auth/contacts`
-.. Publish app but do not verify
-
-Google Calendar OAuth token::
-Obtain on first run of `scma-gcal-sync` with gcal output.
-Follow on screen instructions.
-Stored as a JSON file.
-Path to JSON file specified via the `GCAL_OAUTH_TOKEN_JSON_PATH` environment variable or the `--oauth-token-json-path` option.
-Default path is `token.json`.
-
-== Examples
-
-=== Events
-
-The following examples operate on events.
-
-==== Web to YAML
-
-Fetch events from the SCMA website and converts them to YAML.
-
- scma-gcal-sync events -u <scma-username> -p <scma-password> -o yaml > events.yml
-
-==== YAML to GCal
-
-Read events from a YAML file and sync them to Google Calendar.
-
- scma-gcal-sync events -i yaml --ifile events.yml
-
-==== Web to GCAL
-
-Fetch events from the SCMA website and sync them to Google Calendar.
-
- scma-gcal-sync events -u <scma-username> -p <scma-password>
-
-=== Users
-
-The following examples operate on users.
-
-==== Web to YAML
-
-Fetch users from the SCMA website and converts them to YAML.
-
- scma-gcal-sync users -u <scma-username> -p <scma-password> -o yaml > users.yml
-
-==== YAML to GCal
-
-Read users from a YAML file and sync them to the Access Control List (ACL) for Google Calendar.
-
- scma-gcal-sync users -i yaml --ifile users.yml
-
-==== Web to GCal
-
-Fetch users from the SCMA website and sync them to the Access Control List (ACL) for Google Calendar.
-
- scma-gcal-sync users -u <scma-username> -p <scma-password>
-
-==== YAML to Google Contacts
-
-Reads users from a YAML file and sync them to Google Contacts.
-
- scma-gcal-sync users -i yaml --ifile users.yml -o gppl
-
-==== Web to GCal
-
-Fetch users from the SCMA website and sync them to Google Contacts.
-
- scma-gcal-sync users -u <scma-username> -p <scma-password> -o gppl
+* link:docs/user-guide.adoc[User guide] -- How to synchronize SCMA member information to your personal Google Contacts
+* link:docs/admin-guide.adoc[Administrator guide] -- How to maintain the shared SCMA Google Calendar
+* link:docs/examples.adoc[Invocation examples] -- Various invocation examples
 
 == Limitations
 

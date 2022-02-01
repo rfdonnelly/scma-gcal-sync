@@ -1,0 +1,46 @@
+= User Guide
+
+This guide documents the use of `scma-gcal-sync` to synchronize SCMA member contact information to Google Contacts.
+
+== Setup
+
+. Create a Google Cloud Platform (GCP) project.
+. Add the following APIs
+** Google People API
+* Setup OAuth Client ID authentication
+.. Create OAuth Client ID credentials
+.. Download OAuth Client ID JSON
+.. Configure OAuth consent screen
+... Add the following scopes
+**** `https://wwww.googleapis.com/auth/contacts`
+**** `https://wwww.googleapis.com/auth/calendar` (optional)
+... Publish app but do not verify
+
+== Initial Sync
+
+An initial interactive sync is necessary to perform Google OAuth authentication.
+Run and following the instructions to authenticate and sync.
+
+This will create the "SCMA" contact group if it doesn't aleady exist.
+SCMA members are matched to Google Contacts via email address.
+If an email is found in the SCMA roster but not found in "SCMA" Google Contacts group, the SCMA member will be added to the "SCMA" Google Contacts group.
+If an email is found in the SCMA roster and found in the "SCMA" Google Contacts group, the Google Contact entry will be updated.
+If an email is found in the "SCMA" Google Contacts group but not found in the SCMA roster, the Google Contact entry will be ignored.
+
+[source,sh]
+----
+scma-gcal-sync users --username <scma-username> --password <scma-password> --secret-file oauth-client-secret.json --output gppl
+----
+
+== Subsequent Syncs
+
+Subsequent syncs can be automated by providing the `token.json` generated during the initial sync.
+
+[source,sh]
+----
+export SCMA_USERNAME=<scma-username>
+export SCMA_PASSWORD=<scma-password>
+export GOOGLE_CLIENT_SECRET_PATH=oauth-client-secret.json
+export GOOGLE_OAUTH_TOKEN_PATH=token.json
+scma-gcal-sync users --output gppl
+----
