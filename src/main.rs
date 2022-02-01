@@ -101,18 +101,18 @@ struct Args {
     output_file: PipeFile,
 
     /// Username for the SCMA website (https://rockclimbing.org).
-    #[clap(help_heading = "Web input options")]
+    #[clap(help_heading = "WEB INPUT OPTIONS")]
     #[clap(short, long, default_value = "", env = "SCMA_USERNAME")]
     username: String,
     /// Password for the SCMA website (https://rockclimbing.org).
-    #[clap(help_heading = "Web input options")]
+    #[clap(help_heading = "WEB INPUT OPTIONS")]
     #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
     /// Includes past events.
     ///
     /// Without this option, only in-progress and future events will be sync'd.  With this option,
     /// all events (past, in-progress, and future) will be sync'd.
-    #[clap(help_heading = "Web input options")]
+    #[clap(help_heading = "WEB INPUT OPTIONS")]
     #[clap(long)]
     all: bool,
 
@@ -120,7 +120,7 @@ struct Args {
     ///
     /// The Google Calendar output infers `--auth-type service-account`.  The Google People output
     /// infers `--auth-type oauth`.
-    #[clap(help_heading = "Google API authentication options")]
+    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
     #[clap(arg_enum, long, default_value = "infer")]
     auth_type: AuthType,
 
@@ -134,7 +134,7 @@ struct Args {
     /// The `--auth-type oauth` JSON looks like: `{"installed":{"client_id": ... }}`.
     ///
     /// The `--auth-type service-account` JSON looks like: `{"type": "service_account", "project_id": ...}`.
-    #[clap(help_heading = "Google API authentication options")]
+    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
     #[clap(
         long = "secret-file",
         default_value = "secret.json",
@@ -147,7 +147,7 @@ struct Args {
     /// This file is fully managed (created, written, and read) by the application.
     ///
     /// This is used for the oauth --auth-type only.
-    #[clap(help_heading = "Google API authentication options")]
+    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
     #[clap(
         long = "token-file",
         default_value = "token.json",
@@ -156,7 +156,7 @@ struct Args {
     oauth_token_json_path: String,
 
     /// The name of the Google Calendar to sync to.
-    #[clap(help_heading = "Google Calendar output options")]
+    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
     #[clap(short, long, default_value = "SCMA")]
     calendar: String,
 
@@ -166,17 +166,17 @@ struct Args {
     /// authentication to allow a non-service account to administer the calendar.
     ///
     /// Example: --calendar-owner owner1@example.com --calendar-owner owner2@example.com
-    #[clap(help_heading = "Google Calendar output options")]
+    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
     #[clap(long = "calendar-owner")]
     calendar_owners: Vec<String>,
 
     /// Disables sending an email notification on ACL insert
-    #[clap(help_heading = "Google Calendar output options")]
+    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
     #[clap(arg_enum, long, default_value = "false")]
     notify_acl_insert: Boolean,
 
     /// The name of the Google People ContactGroup to sync to.
-    #[clap(help_heading = "Google People output options")]
+    #[clap(help_heading = "GOOGLE PEOPLE OPTIONS")]
     #[clap(long, default_value = "SCMA")]
     group: String,
 }
