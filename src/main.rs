@@ -165,7 +165,7 @@ struct Args {
     #[clap(arg_enum, long, default_value = "false")]
     notify_acl_insert: Boolean,
 
-    /// The name of the Google Contacts label to use.
+    /// The name of the Google People ContactGroup to sync to.
     #[clap(help_heading = "Google People output options")]
     #[clap(long, default_value = "SCMA")]
     group: String,
