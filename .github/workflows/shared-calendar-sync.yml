@@ -1,0 +1,36 @@
+name: Shared Calendar Sync
+on:
+  workflow_dispatch:
+  schedule:
+      # Run every day at 2:30am PST (10:30am UTC)
+    - cron: '30 10 * * *'
+
+jobs:
+  build:
+    name: Shared Calendar Sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download latest release
+        uses: robinraju/release-downloader@v1.3
+        with:
+          repository: rfdonnelly/scma-gcal-sync
+          latest: true
+          fileName: scma-gcal-sync
+      - name: Set execute permissions
+        run: chmod +x scma-gcal-sync
+      - name: Populate credentials
+        run: |
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > secret.json
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      - name: Sync Events
+        run: ./scma-gcal-sync events
+        env:
+          SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
+          SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+      - name: Sync ACL
+        run: ./scma-gcal-sync users
+        env:
+          SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
+          SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+
