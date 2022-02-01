@@ -1,6 +1,6 @@
 = Privacy Policy
 
-The scma-gcal-sync application synchronizes events from the Southern California Mountaineers Association (SCMA) website (https://rockclimbing.org) to the user's Google Calendar.
+The scma-gcal-sync application synchronizes events and/or contacts from the Southern California Mountaineers Association (SCMA) website (https://rockclimbing.org) to the user's Google Calendar and/or Google Contacts.
 
 == Purpose
 
@@ -11,9 +11,12 @@ The purpose of this document is to comply with the https://developers.google.com
 The scma-gcal-sync application:
 
 * reads the user's Google Calendar calendar list to retrieve the ID of the user-specified calendar by name
-* updates existing events in the user-specified calendar
 * inserts new events in the user-specified calendar
+* updates existing events in the user-specified calendar
+* reads the user's Google Contacts contact groups to retrive the ID of the user-specified contact group by name
+* inserts new contacts into the user-specified contact group
+* updates existing contacts in the user-specified contact group
 
 == Information Collected
 
-The scma-gcal-sync application does not collect user data from Google Calendar.
+The scma-gcal-sync application does not collect user data from Google Calendar or Google Contacts.
