@@ -5,6 +5,8 @@ image:https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/shared-cale
 
 Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Association (SCMA)] calendar events to Google Calendar.
 
+link:https://calendar.google.com/calendar/u/0/r?cid=07i8hndd8k4a4ubhicqie9sak4@group.calendar.google.com[Add to Google Calendar]
+
 [link=https://asciinema.org/a/3jH3c0B7XrRf1gimik3AkOJYY]
 image::https://asciinema.org/a/3jH3c0B7XrRf1gimik3AkOJYY.svg[asciicast]
 
