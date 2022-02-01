@@ -7,7 +7,7 @@ This guide documents the use of `scma-gcal-sync` to synchronize SCMA member cont
 . Create a Google Cloud Platform (GCP) project.
 . Add the following APIs
 ** Google People API
-* Setup OAuth Client ID authentication
+. Setup OAuth Client ID authentication
 .. Create OAuth Client ID credentials
 .. Download OAuth Client ID JSON
 .. Configure OAuth consent screen
