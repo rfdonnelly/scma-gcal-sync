@@ -11,6 +11,8 @@ use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
+use std::collections::HashMap;
+
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const CONCURRENT_REQUESTS: usize = 3;
 
@@ -170,6 +172,25 @@ struct Args {
     #[clap(long = "calendar-owner")]
     calendar_owners: Vec<String>,
 
+    /// A map of email aliases to account for email aliases resolution done by Goolge Calendar.
+    ///
+    /// A YAML file containing a map of SCMA email addresses to Google email aliases.
+    ///
+    /// Google Calendar resolves email address aliases.  For example, we might do an acl.insert for
+    /// the email user-alias@example.com.  Behind the scenes, Google Calendar resolves the alias
+    /// and replaces the email with user@example.com.  This leads to a insert+delete pair on the
+    /// next sync.  To prevent this, the email alias resolution must be done before acl.insert.  If
+    /// an SCMA email exists as a key in this map, the corresponding value will be used in its
+    /// place.
+    ///
+    /// Example contents:
+    ///
+    ///  { "user-alias@example.com": "user@example.com", "scma-member-email-address@example.com":
+    ///  "google-resolved-email-address@example.com" }
+    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
+    #[clap(long)]
+    email_aliases_file: Option<String>,
+
     /// Disables sending an email notification on ACL insert
     #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
     #[clap(arg_enum, long, default_value = "false")]
@@ -320,7 +341,19 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     match args.output {
         OutputType::GCal => {
-            let emails: Vec<&str> = users.iter().map(|user| user.email.as_ref()).collect();
+            let email_aliases: HashMap<String, String> = match args.email_aliases_file {
+                None => HashMap::new(),
+                Some(ref path) => {
+                    let email_aliases = std::fs::read_to_string(path)?;
+                    serde_yaml::from_str(&email_aliases)?
+                }
+            };
+
+            let emails: Vec<&str> = users
+                .iter()
+                .map(|user| user.email.as_str())
+                .map(|email| email_aliases.get(email).map(AsRef::as_ref).unwrap_or(email))
+                .collect();
 
             let auth = auth_from_args(&args, AuthType::ServiceAccount).await?;
             GCal::new(
