@@ -16,10 +16,18 @@ pub struct GCal {
     notify_acl_insert: bool,
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub enum AclSyncOp {
-    Insert(String),
-    Delete(String),
+type Email = String;
+
+#[derive(Debug)]
+enum AclSyncOp {
+    Insert(Email),
+    Delete(Email),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct AclSyncOpsResult {
+    inserts: Vec<Email>,
+    deletes: Vec<Email>,
 }
 
 // To enable named argument
@@ -143,8 +151,13 @@ impl GCal {
         let acls = self.acl_list().await?;
         let ops = Self::acl_sync_ops(emails, &acls);
 
-        info!(ops.len=%ops.len(), ?ops, "Determined sync operations");
+        info!(ops.inserts.len=%ops.inserts.len(), ops.deletes.len=%ops.deletes.len(), ?ops, "Determined sync operations");
 
+        let ops = ops
+            .inserts
+            .into_iter()
+            .map(AclSyncOp::Insert)
+            .chain(ops.deletes.into_iter().map(AclSyncOp::Delete));
         stream::iter(ops)
             .map(|op| self.acl_insert_or_delete(op))
             .buffer_unordered(CONCURRENT_REQUESTS_ACL)
@@ -188,8 +201,8 @@ impl GCal {
     ///
     /// * Insert user0@example.com
     /// * Delete user2@example.com
-    fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> Vec<AclSyncOp> {
-        let readers: HashSet<String> = rules
+    fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> AclSyncOpsResult {
+        let readers: HashSet<Email> = rules
             .iter()
             .filter(|rule| rule.role == Some("reader".to_string()))
             .map(|rule| {
@@ -202,17 +215,12 @@ impl GCal {
                     .to_string()
             })
             .collect();
-        let emails: HashSet<String> = emails.iter().map(|email| email.to_string()).collect();
+        let emails: HashSet<Email> = emails.iter().map(|email| email.to_string()).collect();
 
-        let inserts = emails
-            .difference(&readers)
-            .map(|email| AclSyncOp::Insert(email.to_string()));
-        let deletes = readers
-            .difference(&emails)
-            .map(|email| AclSyncOp::Delete(email.to_string()));
-        let ops: Vec<AclSyncOp> = inserts.chain(deletes).collect();
+        let inserts = emails.difference(&readers).cloned().collect();
+        let deletes = readers.difference(&emails).cloned().collect();
 
-        ops
+        AclSyncOpsResult { inserts, deletes }
     }
 
     async fn acl_insert(
@@ -267,15 +275,20 @@ impl GCal {
     async fn acl_list(&self) -> Result<Vec<api::AclRule>, Box<dyn std::error::Error>> {
         let mut rules = Vec::new();
         let mut page_token = None;
+        let mut page = 1;
 
         loop {
+            info!(%page, "Getting ACL");
             let (mut next_rules, next_page_token) = self.acl_list_page(page_token).await?;
+            info!(%page, rules=?next_rules.iter().map(|rule| rule.id.as_ref().unwrap().as_ref()).collect::<Vec<&str>>(), "Got ACL");
             rules.append(&mut next_rules);
             page_token = next_page_token;
 
             if page_token.is_none() {
                 break;
             }
+
+            page += 1;
         }
 
         Ok(rules)
@@ -464,8 +477,6 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
 mod test {
     use super::*;
 
-    use tap::prelude::*;
-
     #[test]
     fn acl_sync_ops() {
         let emails = vec!["user0@example.com", "user1@example.com"];
@@ -495,11 +506,11 @@ mod test {
                 ..Default::default()
             },
         ];
-        let actual = GCal::acl_sync_ops(&emails, &rules).tap_mut(|ops| ops.sort());
-        let expected = vec![
-            AclSyncOp::Insert("user0@example.com".to_string()),
-            AclSyncOp::Delete("user2@example.com".to_string()),
-        ];
+        let actual = GCal::acl_sync_ops(&emails, &rules);
+        let expected = AclSyncOpsResult {
+            inserts: vec!["user0@example.com".to_string()],
+            deletes: vec!["user2@example.com".to_string()],
+        };
         assert_eq!(actual, expected);
     }
 }
