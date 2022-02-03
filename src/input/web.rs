@@ -286,27 +286,23 @@ impl TryFrom<Page> for Users {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let mut addy_emails: HashMap<String, String> = HashMap::new();
-        let mut id_addys: HashMap<String, String> = HashMap::new();
+        let mut email: Option<String> = None;
+        let mut id_emails: HashMap<String, String> = HashMap::new();
 
         for line in page.as_ref().lines() {
             let trimmed = line.trim_start();
             if trimmed.starts_with("var addy") {
-                let (left_assign, right_assign) = trimmed.split_once("= '").unwrap();
-                let (_, addy) = left_assign.split_once(' ').unwrap();
-                let (email, _) = right_assign.split_once("';").unwrap();
-                let email = email.replace("'+ '", "");
-                let email = email.replace("' + '", "");
-                let email = email.replace("' +'", "");
-                let email = html_escape::decode_html_entities(&email);
-                addy_emails.insert(addy.to_string(), email.to_string());
+                let (_, right) = trimmed.split_once("= '").unwrap();
+                let (obfuscated, _) = right.split_once("';").unwrap();
+                let obfuscated = obfuscated.replace("'+ '", "");
+                let obfuscated = obfuscated.replace("' + '", "");
+                let obfuscated = obfuscated.replace("' +'", "");
+                email = Some(html_escape::decode_html_entities(&obfuscated).to_string());
             } else if trimmed.starts_with("$('#cbMa") {
                 let (_, right) = trimmed.split_once("$('#").unwrap();
                 let (id, _) = right.split_once("')").unwrap();
 
-                let (_, right) = right.split_once(":' + ").unwrap();
-                let (addy, _) = right.split_once(' ').unwrap();
-                id_addys.insert(id.to_string(), addy.to_string());
+                id_emails.insert(id.to_string(), email.take().unwrap().clone());
             } else if trimmed.contains("cbUserURLs") {
                 break;
             }
@@ -369,8 +365,7 @@ impl TryFrom<Page> for Users {
                     .attr("id")
                     .unwrap();
                 let undefined = "UNDEFINED".to_string();
-                let addy = id_addys.get(email_id).unwrap_or(&undefined);
-                let email = addy_emails.get(addy).unwrap_or(&undefined);
+                let email = id_emails.get(email_id).unwrap_or(&undefined);
                 let email = normalize_email(email);
 
                 let user = User {
