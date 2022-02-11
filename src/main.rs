@@ -349,6 +349,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 }
             };
 
+            info!(?email_aliases, "Applying email aliases");
             let emails: Vec<&str> = users
                 .iter()
                 .map(|user| user.email.as_str())

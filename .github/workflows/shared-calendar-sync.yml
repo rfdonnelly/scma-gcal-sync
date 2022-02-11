@@ -31,6 +31,7 @@ jobs:
       - name: Populate email aliases
         run: |
           echo "$EMAIL_ALIASES" > email-aliases.yml
+          cat email-aliases.yml
         env:
           EMAIL_ALIASES: ${{ secrets.EMAIL_ALIASES }}
       - name: Sync ACL
