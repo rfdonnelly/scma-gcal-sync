@@ -409,13 +409,9 @@ fn event_start(event: &Event) -> api::EventDateTime {
 }
 
 fn event_end(event: &Event) -> api::EventDateTime {
-    // WORKAROUND: Google Calendar seems to require all-day-multi-day events to end on the day
-    // after.  Otherwise they show as 1 day short.
-    let end_date = if event.start_date == event.end_date {
-        event.end_date
-    } else {
-        event.end_date + Duration::days(1)
-    };
+    // WORKAROUND: Google Calendar seems to require all-day events to end on the day after.
+    // Otherwise they show as 1 day short.
+    let end_date = event.end_date + Duration::days(1);
 
     api::EventDateTime {
         date: Some(end_date.to_string()),
