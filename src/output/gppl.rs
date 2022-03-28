@@ -391,17 +391,17 @@ impl GPpl {
 
         let inserts: Vec<_> = user_emails
             .difference(&person_emails)
-            .map(|email| users.remove(&email.to_string()).unwrap())
+            .map(|email| users.remove(email).unwrap())
             .collect();
         let deletes: Vec<_> = person_emails
             .difference(&user_emails)
-            .map(|email| people.remove(&email.to_string()).unwrap())
+            .map(|email| people.remove(email).unwrap())
             .collect();
         let updates: Vec<_> = user_emails
             .intersection(&person_emails)
             .map(|email| {
-                let user = users.remove(&email.to_string()).unwrap();
-                let person = people.remove(&email.to_string()).unwrap();
+                let user = users.remove(email).unwrap();
+                let person = people.remove(email).unwrap();
                 (user, person)
             })
             .collect();
