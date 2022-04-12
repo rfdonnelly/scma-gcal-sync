@@ -1,4 +1,5 @@
 = SCMA Google Calendar Sync
+:imagesdir: images
 
 image:https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/ci.yml/badge.svg[CI, link=https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/ci.yml]
 image:https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/shared-calendar-sync.yml/badge.svg[Google Calendar Sync, link=https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/shared-calendar-sync.yml]
@@ -10,7 +11,7 @@ Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Asso
 The shared calendar is available to SCMA members.
 Click the image below to add the calendar to your Google Calendar.
 
-image::images/add-to-google-calendar.png[Add to Google Calendar, height=20, link=https://calendar.google.com/calendar/u/0/r?cid=07i8hndd8k4a4ubhicqie9sak4%40group.calendar.google.com]
+image::add-to-google-calendar.png[Add to Google Calendar, height=20, link=https://calendar.google.com/calendar/u/0/r?cid=07i8hndd8k4a4ubhicqie9sak4%40group.calendar.google.com]
 
 === Access Requirements
 
