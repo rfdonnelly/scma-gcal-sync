@@ -35,7 +35,7 @@ jobs:
         env:
           EMAIL_ALIASES: ${{ secrets.EMAIL_ALIASES }}
       - name: Sync ACL
-        run: ./scma-gcal-sync users --email-aliases-file email-aliases.yml
+        run: ./scma-gcal-sync users --email-aliases-file email-aliases.yml --notify-acl-insert true
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
