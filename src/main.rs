@@ -218,10 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn auth_from_args(
-    args: &Args,
-    infer_type: AuthType,
-) -> Result<GAuth, Box<dyn std::error::Error>> {
+async fn auth_from_args(args: &Args, infer_type: AuthType) -> anyhow::Result<GAuth> {
     let auth_type = match args.auth_type {
         AuthType::Infer => infer_type,
         AuthType::OAuth | AuthType::ServiceAccount => args.auth_type,

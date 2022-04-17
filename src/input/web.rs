@@ -1,5 +1,6 @@
 use crate::model::{Attendee, Comment, DateSelect, Event, User};
 
+use anyhow::{anyhow, Context};
 use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
@@ -67,22 +68,30 @@ impl<'a> Web<'a> {
             .build()?)
     }
 
-    async fn login(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn login(&self, username: &str, password: &str) -> anyhow::Result<()> {
         let url = [self.base_url, LOGIN_PATH].join("");
 
         info!(%url, "Logging in");
 
         let login_params = [("username", username), ("passwd", password)];
-        let rsp = self.client.post(url).form(&login_params).send().await?;
+        let rsp = self
+            .client
+            .post(url)
+            .form(&login_params)
+            .send()
+            .await
+            .with_context(|| format!("unable to login to {} due to bad request", self.base_url))?;
 
         if !rsp.status().is_success() {
-            Err("login failed".into())
+            Err(anyhow!(
+                "unable to login to {} due to bad response",
+                self.base_url
+            ))
         } else if rsp.url().path() != "/" {
-            Err("bad username or password".into())
+            Err(anyhow!(
+                "unable to login to {} due to bad username or password",
+                self.base_url
+            ))
         } else {
             Ok(())
         }
