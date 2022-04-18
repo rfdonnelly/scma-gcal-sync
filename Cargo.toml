@@ -7,7 +7,11 @@ description = "Synchronizes Southern California Mountaineers Association (SCMA) 
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rfdonnelly/scma-gcal-sync"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+strip = true
+# Optimize for size
+opt-level = "z"
+lto = true
 
 [dependencies]
 clap = { version = "3.0.5", features = ["derive", "env"] }
