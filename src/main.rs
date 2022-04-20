@@ -6,6 +6,7 @@ use input::{EventList, Web};
 use model::DateSelect;
 use output::{GAuth, GCal, GPpl};
 
+use anyhow::Context;
 use clap::{AppSettings, ArgEnum, Parser};
 use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
@@ -341,8 +342,10 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             let email_aliases: HashMap<String, String> = match args.email_aliases_file {
                 None => HashMap::new(),
                 Some(ref path) => {
-                    let email_aliases = std::fs::read_to_string(path)?;
-                    serde_yaml::from_str(&email_aliases)?
+                    let email_aliases = std::fs::read_to_string(path)
+                        .context(format!("unable to read email aliases file `{}`", path))?;
+                    serde_yaml::from_str(&email_aliases)
+                        .context(format!("unable to parse email aliases file `{}`", path))?
                 }
             };
 
