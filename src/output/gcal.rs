@@ -86,8 +86,12 @@ impl GCal {
         let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");
 
-        let client =
-            hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots());
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_only()
+            .enable_http1()
+            .build();
+        let client = hyper::Client::builder().build(https);
 
         let hub = CalendarHub::new(client, gauth.into());
 
