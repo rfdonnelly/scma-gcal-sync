@@ -206,7 +206,7 @@ impl GCal {
     /// * Insert user0@example.com
     /// * Delete user2@example.com
     fn acl_sync_ops(emails: &[&str], rules: &[api::AclRule]) -> AclSyncOpsResult {
-        let readers: HashSet<Email> = rules
+        let acl_readers: HashSet<Email> = rules
             .iter()
             .filter(|rule| rule.role == Some("reader".to_string()))
             .map(|rule| {
@@ -221,8 +221,8 @@ impl GCal {
             .collect();
         let emails: HashSet<Email> = emails.iter().map(|email| email.to_string()).collect();
 
-        let inserts = emails.difference(&readers).cloned().collect();
-        let deletes = readers.difference(&emails).cloned().collect();
+        let inserts = emails.difference(&acl_readers).cloned().collect();
+        let deletes = acl_readers.difference(&emails).cloned().collect();
 
         AclSyncOpsResult { inserts, deletes }
     }
