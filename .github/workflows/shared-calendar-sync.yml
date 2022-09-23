@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download latest release
-        uses: robinraju/release-downloader@v1.4
+        uses: robinraju/release-downloader@v1.5
         with:
           repository: rfdonnelly/scma-gcal-sync
           latest: true
@@ -19,24 +19,38 @@ jobs:
       - name: Set execute permissions
         run: chmod +x scma-gcal-sync
       - name: Populate credentials
-        run: |
-          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > secret.json
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > secret-service-account.json
       - name: Sync Events
-        run: ./scma-gcal-sync events
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+        run: >
+          ./scma-gcal-sync events
+            --input web
+            --output gcal
+            --calendar SCMA
+            --auth-type service-account
+            --secret-file secret-service-account.json
       - name: Populate email aliases
+        env:
+          EMAIL_ALIASES: ${{ secrets.EMAIL_ALIASES }}
         run: |
           echo "$EMAIL_ALIASES" > email-aliases.yml
           cat email-aliases.yml
-        env:
-          EMAIL_ALIASES: ${{ secrets.EMAIL_ALIASES }}
       - name: Sync ACL
-        run: ./scma-gcal-sync users --email-aliases-file email-aliases.yml --notify-acl-insert true
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+        run: >
+          ./scma-gcal-sync users
+            --input web
+            --output gcal
+            --calendar SCMA
+            --email-aliases-file email-aliases.yml
+            --auth-type service-account
+            --secret-file secret-service-account.json
+            --notify-acl-insert true
 
