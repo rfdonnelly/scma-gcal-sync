@@ -174,7 +174,9 @@ impl GPpl {
         Ok(())
     }
 
-    async fn create_hub(gauth: GAuth) -> Result<PeopleService<Connector>, Box<dyn std::error::Error>> {
+    async fn create_hub(
+        gauth: GAuth,
+    ) -> Result<PeopleService<Connector>, Box<dyn std::error::Error>> {
         let scopes = [SCOPE];
         let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");

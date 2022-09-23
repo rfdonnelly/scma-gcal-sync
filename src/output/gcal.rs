@@ -1,6 +1,6 @@
 use crate::model::Event;
-use crate::GAuth;
 use crate::Connector;
+use crate::GAuth;
 
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -82,7 +82,9 @@ impl GCal {
         Ok(gcal)
     }
 
-    async fn create_hub(gauth: GAuth) -> Result<CalendarHub<Connector>, Box<dyn std::error::Error>> {
+    async fn create_hub(
+        gauth: GAuth,
+    ) -> Result<CalendarHub<Connector>, Box<dyn std::error::Error>> {
         let scopes = [SCOPE];
         let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");

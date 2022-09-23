@@ -1,6 +1,4 @@
-use scma_gcal_sync::{
-    DateSelect, Event, Web, GAuth, GCal, GPpl
-};
+use scma_gcal_sync::{DateSelect, Event, GAuth, GCal, GPpl, Web};
 
 use anyhow::Context;
 use clap::{AppSettings, ArgEnum, Parser};
