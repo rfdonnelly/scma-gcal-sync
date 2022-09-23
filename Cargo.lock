@@ -399,10 +399,11 @@ dependencies = [
 
 [[package]]
 name = "google-calendar3"
-version = "3.1.0+20220217"
+version = "4.0.1+20220217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57707b15010ab9bbec2a4552331407ebec6501769834edb0deaaab551597614b"
+checksum = "fd8c2556fbb13481fe5cd717719b93c0206e8df5931184eadf734e26df92dfcf"
 dependencies = [
+ "http",
  "hyper",
  "hyper-rustls",
  "itertools",
@@ -410,16 +411,19 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "tokio",
+ "tower-service",
  "url 1.7.2",
  "yup-oauth2",
 ]
 
 [[package]]
 name = "google-people1"
-version = "3.1.0+20220303"
+version = "4.0.1+20220303"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8aaa47da76da48988d722c60d6da4951a0a907ebf0c3df397d9679687442158"
+checksum = "649122719948d316f5b2353b6f64de014cea3f038950b025ad67e4bff4d67a2a"
 dependencies = [
+ "http",
  "hyper",
  "hyper-rustls",
  "itertools",
@@ -427,6 +431,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "tokio",
+ "tower-service",
  "url 1.7.2",
  "yup-oauth2",
 ]
@@ -1483,14 +1489,15 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.26"
+version = "0.9.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578a7433b776b56a35785ed5ce9a7e777ac0598aac5a6dd1b4b18a307c7fc71b"
+checksum = "8613d593412a0deb7bbd8de9d908efff5a0cb9ccd8f62c641e7b2ed2f57291d1"
 dependencies = [
  "indexmap",
+ "itoa",
  "ryu",
  "serde",
- "yaml-rust",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -1870,6 +1877,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unsafe-libyaml"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1e5fa573d8ac5f1a856f8d7be41d390ee973daf97c806b2c1a465e4e1406e68"
+
+[[package]]
 name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2147,9 +2160,9 @@ dependencies = [
 
 [[package]]
 name = "yup-oauth2"
-version = "6.7.1"
+version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22978c3967bbb8ba0c100106d83e652cf640b55d64b7e7d93d943fc0738d9453"
+checksum = "98748970d2ddf05253e6525810d989740334aa7509457864048a829902db76f3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2168,5 +2181,6 @@ dependencies = [
  "serde_json",
  "time 0.3.14",
  "tokio",
+ "tower-service",
  "url 2.3.1",
 ]

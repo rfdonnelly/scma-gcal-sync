@@ -1,5 +1,6 @@
 use crate::model::Event;
 use crate::GAuth;
+use crate::Connector;
 
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -11,7 +12,7 @@ use std::fmt::Write;
 
 pub struct GCal {
     calendar_id: String,
-    hub: CalendarHub,
+    hub: CalendarHub<Connector>,
     dry_run: bool,
     notify_acl_insert: bool,
 }
@@ -81,7 +82,7 @@ impl GCal {
         Ok(gcal)
     }
 
-    async fn create_hub(gauth: GAuth) -> Result<CalendarHub, Box<dyn std::error::Error>> {
+    async fn create_hub(gauth: GAuth) -> Result<CalendarHub<Connector>, Box<dyn std::error::Error>> {
         let scopes = [SCOPE];
         let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");
@@ -102,7 +103,7 @@ impl GCal {
     ///
     /// If named calendar does not exist, a new calendar will be created.
     async fn calendars_get_or_insert_by_name(
-        hub: &CalendarHub,
+        hub: &CalendarHub<Connector>,
         calendar_name: &str,
         dry_run: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {

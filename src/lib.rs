@@ -1,3 +1,9 @@
+use hyper::client::HttpConnector;
+use hyper_rustls::HttpsConnector;
+
+// For hyper connections
+pub(crate) type Connector = HttpsConnector<HttpConnector>;
+
 mod input;
 mod model;
 mod output;

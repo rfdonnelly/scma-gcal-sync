@@ -1,5 +1,6 @@
 use crate::model::User;
 use crate::output::GAuth;
+use crate::Connector;
 
 use google_people1::{api, PeopleService};
 use indexmap::IndexMap;
@@ -59,7 +60,7 @@ const SCMA_POSITION_KEY: &str = "SCMA Position";
 ///      TODO?: Add an option to delete these contacts using the people.batchDeleteContacts?
 ///      TODO?: Move these contacts to a different ContactGroup (e.g. "SCMA Alumni")?
 pub struct GPpl {
-    hub: PeopleService,
+    hub: PeopleService<Connector>,
     /// The unique identifer for the ContactGroup assigned by the People API
     group_resource_name: String,
     dry_run: bool,
@@ -173,7 +174,7 @@ impl GPpl {
         Ok(())
     }
 
-    async fn create_hub(gauth: GAuth) -> Result<PeopleService, Box<dyn std::error::Error>> {
+    async fn create_hub(gauth: GAuth) -> Result<PeopleService<Connector>, Box<dyn std::error::Error>> {
         let scopes = [SCOPE];
         let token = gauth.auth().token(&scopes).await?;
         info!(expiration_time=?token.expiration_time(), "Got token");
@@ -194,7 +195,7 @@ impl GPpl {
     ///
     /// If the named ContactGroup does not exist, a new ContactGroup will be created.
     async fn contact_groups_get_or_create_by_name(
-        hub: &PeopleService,
+        hub: &PeopleService<Connector>,
         group_name: &str,
         dry_run: bool,
     ) -> Result<String, Box<dyn std::error::Error>> {

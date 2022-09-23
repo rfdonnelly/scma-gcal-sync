@@ -1,6 +1,6 @@
+use crate::Connector;
+
 use anyhow::Context;
-use hyper::client::HttpConnector;
-use hyper_rustls::HttpsConnector;
 use tracing::info;
 use yup_oauth2::{
     authenticator::Authenticator, InstalledFlowAuthenticator, InstalledFlowReturnMethod,
@@ -8,7 +8,7 @@ use yup_oauth2::{
 };
 
 pub struct GAuth {
-    auth: Authenticator<HttpsConnector<HttpConnector>>,
+    auth: Authenticator<Connector>,
 }
 
 impl GAuth {
@@ -51,12 +51,12 @@ impl GAuth {
         Ok(Self { auth })
     }
 
-    pub fn auth(&self) -> &Authenticator<HttpsConnector<HttpConnector>> {
+    pub fn auth(&self) -> &Authenticator<Connector> {
         &self.auth
     }
 }
 
-impl From<GAuth> for Authenticator<HttpsConnector<HttpConnector>> {
+impl From<GAuth> for Authenticator<Connector> {
     fn from(gauth: GAuth) -> Self {
         gauth.auth
     }
