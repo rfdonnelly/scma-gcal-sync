@@ -1,5 +1,5 @@
 use crate::model::User;
-use crate::GAuth;
+use crate::output::GAuth;
 
 use google_people1::{api, PeopleService};
 use indexmap::IndexMap;

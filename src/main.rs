@@ -1,10 +1,6 @@
-mod input;
-mod model;
-mod output;
-
-use input::{EventList, Web};
-use model::DateSelect;
-use output::{GAuth, GCal, GPpl};
+use scma_gcal_sync::{
+    DateSelect, Event, Web, GAuth, GCal, GPpl
+};
 
 use anyhow::Context;
 use clap::{AppSettings, ArgEnum, Parser};
@@ -388,7 +384,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn scma_to_gcal(
-    event: model::Event,
+    event: Event,
     web: &Web<'_>,
     gcal: &GCal,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -400,7 +396,7 @@ async fn web_events<'a>(
     username: &str,
     password: &str,
     dates: DateSelect,
-) -> Result<(Web<'a>, EventList), Box<dyn std::error::Error>> {
+) -> Result<(Web<'a>, Vec<Event>), Box<dyn std::error::Error>> {
     let web = Web::new(username, password, BASE_URL, dates).await?;
     let events = web.fetch_events().await?;
     Ok((web, events))

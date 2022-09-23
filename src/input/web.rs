@@ -48,7 +48,7 @@ impl<'a> Web<'a> {
         Ok(events)
     }
 
-    pub async fn fetch_events(&self) -> Result<EventList, Box<dyn std::error::Error>> {
+    pub async fn fetch_events(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events_url = match self.dates {
             DateSelect::All => [self.base_url, EVENTS_PATH].join(""),
             DateSelect::NotPast => [self.base_url, EVENTS_PATH, "&filterEvents=notpast"].join(""),
@@ -56,7 +56,7 @@ impl<'a> Web<'a> {
 
         info!(url=%events_url, "Fetching event list page");
         let events_page = Page::from_url(&self.client, &events_url).await?;
-        let events = EventList::try_from((self.base_url, events_page))?;
+        let events = EventList::try_from((self.base_url, events_page))?.into_inner();
 
         Ok(events)
     }
@@ -99,7 +99,7 @@ impl<'a> Web<'a> {
 
     async fn fetch_events_details(
         &self,
-        events: EventList,
+        events: Vec<Event>,
     ) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events = stream::iter(events)
             .map(|event| self.fetch_event_details(event))
@@ -257,6 +257,12 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct EventList(Vec<Event>);
 
+impl EventList {
+    fn into_inner(self) -> Vec<Event> {
+        self.0
+    }
+}
+
 impl TryFrom<(&str, Page)> for EventList {
     type Error = Box<dyn std::error::Error>;
 
@@ -270,15 +276,6 @@ impl TryFrom<(&str, Page)> for EventList {
         });
 
         Ok(Self(events))
-    }
-}
-
-impl IntoIterator for EventList {
-    type Item = Event;
-    type IntoIter = std::vec::IntoIter<Event>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
     }
 }
 
