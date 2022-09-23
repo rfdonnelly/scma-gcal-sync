@@ -365,7 +365,7 @@ async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 args.notify_acl_insert.into(),
             )
             .await?
-            .acl_sync(&emails)
+            .acl_sync(&emails, &args.calendar_owners)
             .await?;
         }
         OutputType::Yaml => {

@@ -26,8 +26,8 @@ enum AclSyncOp {
 
 #[derive(Debug, PartialEq, Eq)]
 struct AclSyncOpsResult {
-    inserts: Vec<Email>,
-    deletes: Vec<Email>,
+    inserts: HashSet<Email>,
+    deletes: HashSet<Email>,
 }
 
 // To enable named argument
@@ -151,9 +151,23 @@ impl GCal {
     }
 
     // Syncs emails with readers in calendar ACL
-    pub async fn acl_sync(&self, emails: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn acl_sync(
+        &self,
+        emails: &[&str],
+        owners: &[String],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let acls = self.acl_list().await?;
         let ops = Self::acl_sync_ops(emails, &acls);
+
+        // Remove owners so that we don't operator on them
+        let ops = {
+            let mut ops = ops;
+            for owner in owners {
+                ops.inserts.remove(owner);
+                ops.deletes.remove(owner);
+            }
+            ops
+        };
 
         info!(ops.inserts.len=%ops.inserts.len(), ops.deletes.len=%ops.deletes.len(), ?ops, "Determined sync operations");
 
@@ -508,8 +522,8 @@ mod test {
         ];
         let actual = GCal::acl_sync_ops(&emails, &rules);
         let expected = AclSyncOpsResult {
-            inserts: vec!["user0@example.com".to_string()],
-            deletes: vec!["user2@example.com".to_string()],
+            inserts: vec!["user0@example.com".to_string()].into_iter().collect(),
+            deletes: vec!["user2@example.com".to_string()].into_iter().collect(),
         };
         assert_eq!(actual, expected);
     }
