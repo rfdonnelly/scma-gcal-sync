@@ -36,4 +36,4 @@ indexmap = "1"
 anyhow = "1"
 
 [dev-dependencies]
-insta = "1"
+insta = { version = "1", features = ["yaml"] }
