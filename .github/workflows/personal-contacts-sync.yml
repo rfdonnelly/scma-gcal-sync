@@ -29,12 +29,5 @@ jobs:
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
-        run: >
-          ./scma-gcal-sync users
-            --input web
-            --output gppl
-            --group SCMA
-            --auth-type oauth
-            --secret-file secret-oauth.json
-            --token-file token.json
+        run: ./scma-gcal-sync users --input web --output gppl --group SCMA --auth-type oauth --secret-file secret-oauth.json --token-file token.json
 
