@@ -10,6 +10,8 @@ jobs:
     name: Shared Calendar Sync
     runs-on: ubuntu-latest
     steps:
+      - name: Install dependencies
+        run: sudo apt-get install -y openssl
       - name: Download latest release
         uses: robinraju/release-downloader@v1.5
         with:
@@ -53,4 +55,3 @@ jobs:
             --auth-type service-account
             --secret-file secret-service-account.json
             --notify-acl-insert true
-
