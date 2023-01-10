@@ -449,7 +449,7 @@ mod test {
             attendees: None,
             timestamp: None,
         };
-        let timestamp = Utc.timestamp(0, 0);
+        let timestamp = Utc.timestamp_opt(0, 0).unwrap();
         let event = Event::try_from((event_item, page, timestamp)).unwrap();
         insta::assert_yaml_snapshot!(event);
     }

@@ -46,7 +46,7 @@ fn serialize_datetime_pacific<S>(dt: &DateTime<Local>, serializer: S) -> Result<
 where
     S: Serializer,
 {
-    let pacific = FixedOffset::west(8 * 60 * 60);
+    let pacific = FixedOffset::west_opt(8 * 60 * 60).unwrap();
     let s = dt.with_timezone(&pacific).to_rfc3339();
     serializer.serialize_str(&s)
 }
