@@ -1,7 +1,7 @@
 use scma_gcal_sync::{DateSelect, Event, GAuth, GCal, GPpl, Web};
 
 use anyhow::Context;
-use clap::{AppSettings, ArgEnum, Parser};
+use clap::{Parser, ValueEnum};
 use futures::{stream, StreamExt, TryStreamExt};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -11,19 +11,19 @@ use std::collections::HashMap;
 const BASE_URL: &str = "https://www.rockclimbing.org";
 const CONCURRENT_REQUESTS: usize = 3;
 
-#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 enum DataType {
     Events,
     Users,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 enum InputType {
     Web,
     Yaml,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 enum OutputType {
     #[clap(name = "gcal")]
     GCal,
@@ -32,7 +32,7 @@ enum OutputType {
     Yaml,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 enum AuthType {
     #[clap(name = "oauth")]
     OAuth,
@@ -58,7 +58,7 @@ impl From<&str> for PipeFile {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
 enum Boolean {
     True,
     False,
@@ -74,51 +74,50 @@ impl From<Boolean> for bool {
 }
 
 #[derive(Parser)]
-#[clap(about, version, author)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-struct Args {
+#[command(about, version, author)]
+struct Cli {
     /// Disables Google API methods that create, modify, or delete.
-    #[clap(short = 'n', long)]
+    #[arg(short = 'n', long)]
     dry_run: bool,
 
     /// The data type to operate on.
-    #[clap(arg_enum, default_value = "events")]
+    #[arg(value_enum, default_value = "events")]
     data_type: DataType,
 
-    #[clap(arg_enum, short, long, default_value = "web")]
+    #[arg(value_enum, short, long, default_value = "web")]
     input: InputType,
     /// The name of the input file to use for the yaml input.
-    #[clap(parse(from_str), long = "ifile", default_value = "-")]
+    #[arg(long = "ifile", default_value = "-")]
     input_file: PipeFile,
 
-    #[clap(arg_enum, short, long, default_value = "gcal")]
+    #[arg(value_enum, short, long, default_value = "gcal")]
     output: OutputType,
     /// The name of the output file to use for the yaml output.
-    #[clap(parse(from_str), long = "ofile", default_value = "-")]
+    #[arg(long = "ofile", default_value = "-")]
     output_file: PipeFile,
 
     /// Username for the SCMA website (https://rockclimbing.org).
-    #[clap(help_heading = "WEB INPUT OPTIONS")]
-    #[clap(short, long, default_value = "", env = "SCMA_USERNAME")]
+    #[arg(help_heading = "Web Input Options")]
+    #[arg(short, long, default_value = "", env = "SCMA_USERNAME")]
     username: String,
     /// Password for the SCMA website (https://rockclimbing.org).
-    #[clap(help_heading = "WEB INPUT OPTIONS")]
-    #[clap(short, long, default_value = "", env = "SCMA_PASSWORD")]
+    #[arg(help_heading = "Web Input Options")]
+    #[arg(short, long, default_value = "", env = "SCMA_PASSWORD")]
     password: String,
     /// Includes past events.
     ///
     /// Without this option, only in-progress and future events will be sync'd.  With this option,
     /// all events (past, in-progress, and future) will be sync'd.
-    #[clap(help_heading = "WEB INPUT OPTIONS")]
-    #[clap(long)]
+    #[arg(help_heading = "Web Input Options")]
+    #[arg(long)]
     all: bool,
 
     /// The authentication type to use for the Google APIs.
     ///
     /// The Google Calendar output infers `--auth-type service-account`.  The Google People output
     /// infers `--auth-type oauth`.
-    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
-    #[clap(arg_enum, long, default_value = "infer")]
+    #[arg(help_heading = "Google Authentication Options")]
+    #[arg(value_enum, long, default_value = "infer")]
     auth_type: AuthType,
 
     /// Path to the JSON file that contains the client secret.
@@ -131,8 +130,8 @@ struct Args {
     /// The `--auth-type oauth` JSON looks like: `{"installed":{"client_id": ... }}`.
     ///
     /// The `--auth-type service-account` JSON looks like: `{"type": "service_account", "project_id": ...}`.
-    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
-    #[clap(
+    #[arg(help_heading = "Google Authentication Options")]
+    #[arg(
         long = "secret-file",
         default_value = "secret.json",
         env = "GOOGLE_CLIENT_SECRET_PATH"
@@ -144,8 +143,8 @@ struct Args {
     /// This file is fully managed (created, written, and read) by the application.
     ///
     /// This is used for the oauth --auth-type only.
-    #[clap(help_heading = "GOOGLE AUTHENTICATION OPTIONS")]
-    #[clap(
+    #[arg(help_heading = "Google Authentication Options")]
+    #[arg(
         long = "token-file",
         default_value = "token.json",
         env = "GOOGLE_OAUTH_TOKEN_PATH"
@@ -153,8 +152,8 @@ struct Args {
     oauth_token_json_path: String,
 
     /// The name of the Google Calendar to sync to.
-    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
-    #[clap(short, long, default_value = "SCMA")]
+    #[arg(help_heading = "Google Calendar Options")]
+    #[arg(short, long, default_value = "SCMA")]
     calendar: String,
 
     /// Add a user (by email address) as a co-owner of the calendar.
@@ -163,8 +162,8 @@ struct Args {
     /// authentication to allow a non-service account to administer the calendar.
     ///
     /// Example: --calendar-owner owner1@example.com --calendar-owner owner2@example.com
-    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
-    #[clap(long = "calendar-owner")]
+    #[arg(help_heading = "Google Calendar Options")]
+    #[arg(long = "calendar-owner")]
     calendar_owners: Vec<String>,
 
     /// A map of email aliases to account for email aliases resolution done by Goolge Calendar.
@@ -182,18 +181,18 @@ struct Args {
     ///
     ///  { "user-alias@example.com": "user@example.com", "scma-member-email-address@example.com":
     ///  "google-resolved-email-address@example.com" }
-    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
-    #[clap(long)]
+    #[arg(help_heading = "Google Calendar Options")]
+    #[arg(long)]
     email_aliases_file: Option<String>,
 
     /// Disables sending an email notification on ACL insert
-    #[clap(help_heading = "GOOGLE CALENDAR OPTIONS")]
-    #[clap(arg_enum, long, default_value = "false")]
+    #[arg(help_heading = "Google Calendar Options")]
+    #[arg(value_enum, long, default_value = "false")]
     notify_acl_insert: Boolean,
 
     /// The name of the Google People ContactGroup to sync to.
-    #[clap(help_heading = "GOOGLE PEOPLE OPTIONS")]
-    #[clap(long, default_value = "SCMA")]
+    #[arg(help_heading = "Google People Options")]
+    #[arg(long, default_value = "SCMA")]
     group: String,
 }
 
@@ -205,7 +204,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(filter)
         .init();
 
-    let args = Args::parse();
+    let args = Cli::parse();
 
     match args.data_type {
         DataType::Events => process_events(args).await,
@@ -213,7 +212,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn auth_from_args(args: &Args, infer_type: AuthType) -> anyhow::Result<GAuth> {
+async fn auth_from_args(args: &Cli, infer_type: AuthType) -> anyhow::Result<GAuth> {
     let auth_type = match args.auth_type {
         AuthType::Infer => infer_type,
         AuthType::OAuth | AuthType::ServiceAccount => args.auth_type,
@@ -230,7 +229,7 @@ async fn auth_from_args(args: &Args, infer_type: AuthType) -> anyhow::Result<GAu
     }
 }
 
-async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_events(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let dates = if args.all {
         DateSelect::All
     } else {
@@ -308,7 +307,7 @@ async fn process_events(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn process_users(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_users(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let users = match args.input {
         InputType::Web => {
             Web::new(
