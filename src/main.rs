@@ -46,9 +46,6 @@ enum PipeFile {
     File(String),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct ParsePipeFileError;
-
 impl From<&str> for PipeFile {
     fn from(s: &str) -> Self {
         match s {
