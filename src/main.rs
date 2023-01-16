@@ -395,3 +395,14 @@ async fn web_events<'a>(
     let events = web.fetch_events().await?;
     Ok((web, events))
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Cli::command().debug_assert();
+    }
+}
