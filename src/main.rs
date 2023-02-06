@@ -333,9 +333,9 @@ async fn process_users(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 None => HashMap::new(),
                 Some(ref path) => {
                     let email_aliases = std::fs::read_to_string(path)
-                        .context(format!("unable to read email aliases file `{}`", path))?;
+                        .context(format!("unable to read email aliases file `{path}`"))?;
                     serde_yaml::from_str(&email_aliases)
-                        .context(format!("unable to parse email aliases file `{}`", path))?
+                        .context(format!("unable to parse email aliases file `{path}`"))?
                 }
             };
 
