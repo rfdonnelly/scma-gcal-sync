@@ -64,7 +64,12 @@ impl<'a> Web<'a> {
     fn create_client() -> Result<reqwest::Client, Box<dyn std::error::Error>> {
         Ok(reqwest::Client::builder()
             .cookie_store(true)
-            .user_agent("Mozilla/5.0")
+            .user_agent(format!(
+                "{} {} {}",
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+                env!("CARGO_PKG_REPOSITORY")
+            ))
             .build()?)
     }
 

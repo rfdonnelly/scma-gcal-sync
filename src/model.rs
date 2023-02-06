@@ -92,7 +92,7 @@ impl FromStr for MemberStatus {
             "AM" => Ok(Self::AM),
             "HM" => Ok(Self::HM),
             "RM" => Ok(Self::RM),
-            _ => Err(format!("unrecognized member status '{}'", s).into()),
+            _ => Err(format!("unrecognized member status '{s}'").into()),
         }
     }
 }
@@ -130,7 +130,7 @@ impl FromStr for TripLeaderStatus {
             "G" => Ok(Self::G),
             "S1" => Ok(Self::S1),
             "S2" => Ok(Self::S2),
-            _ => Err(format!("unrecognized trip leader status '{}'", s).into()),
+            _ => Err(format!("unrecognized trip leader status '{s}'").into()),
         }
     }
 }

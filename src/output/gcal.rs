@@ -278,7 +278,7 @@ impl GCal {
     async fn acl_delete(&self, email: &str) -> Result<(), Box<dyn std::error::Error>> {
         info!(%email, "Deleting user");
 
-        let rule_id = format!("user:{}", email);
+        let rule_id = format!("user:{email}");
         if !self.dry_run {
             let rsp = self
                 .hub
@@ -414,7 +414,7 @@ impl TryFrom<&Event> for api::Event {
 
 fn event_id(event: &Event) -> Result<String, std::num::ParseIntError> {
     let id: u32 = event.id.parse()?;
-    let id = format!("{:05}", id);
+    let id = format!("{id:05}");
     Ok(id)
 }
 

@@ -20,8 +20,7 @@ impl GAuth {
             .await
             .with_context(|| {
                 format!(
-                    "could not read OAuth application secret from file `{}`",
-                    client_secret_json_path
+                    "could not read OAuth application secret from file `{client_secret_json_path}`"
                 )
             })?;
 
@@ -40,8 +39,7 @@ impl GAuth {
             .await
             .with_context(|| {
                 format!(
-                    "could not read Google service account key from file `{}`",
-                    client_secret_json_path
+                    "could not read Google service account key from file `{client_secret_json_path}`"
                 )
             })?;
 
