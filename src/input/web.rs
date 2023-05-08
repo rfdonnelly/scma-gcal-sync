@@ -4,6 +4,7 @@ use anyhow::{anyhow, Context};
 use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
+use select::node::Node;
 use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
@@ -294,7 +295,7 @@ impl TryFrom<Page> for Users {
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
         let mut email: Option<String> = None;
-        let mut id_emails: HashMap<String, String> = HashMap::new();
+        let mut emails: EmailIdTable = HashMap::new();
 
         for line in page.as_ref().lines() {
             let trimmed = line.trim_start();
@@ -309,7 +310,7 @@ impl TryFrom<Page> for Users {
                 let (_, right) = trimmed.split_once("$('#").unwrap();
                 let (id, _) = right.split_once("')").unwrap();
 
-                id_emails.insert(id.to_string(), email.take().unwrap().clone());
+                emails.insert(id.to_string(), email.take().unwrap().clone());
             } else if trimmed.contains("cbUserURLs") {
                 break;
             }
@@ -319,77 +320,7 @@ impl TryFrom<Page> for Users {
         let tbody = document.find(Name("tbody")).next().unwrap();
         let members = tbody
             .find(Name("tr"))
-            .map(|tr| {
-                let name = tr
-                    .find(Class("cbUserListFC_formatname"))
-                    .map(|node| node.text())
-                    .next()
-                    .unwrap_or_else(|| "UNDEFINED".to_string());
-                let member_status = tr
-                    .find(Class("cbUserListFC_cb_memberstatus"))
-                    .next()
-                    .unwrap()
-                    .text()
-                    .parse()?;
-                let trip_leader_status =
-                    match tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
-                        Some(node) => Some(node.text().parse()?),
-                        None => None,
-                    };
-                let position = match tr.find(Class("cbUserListFC_cb_position")).next() {
-                    Some(node) => Some(node.text().parse()?),
-                    None => None,
-                };
-                let address = tr
-                    .find(Class("cbUserListFC_cb_address"))
-                    .next()
-                    .unwrap()
-                    .text();
-                let city = tr
-                    .find(Class("cbUserListFC_cb_city"))
-                    .next()
-                    .unwrap()
-                    .text();
-                let state = tr
-                    .find(Class("cbUserListFC_cb_state"))
-                    .next()
-                    .unwrap()
-                    .text();
-                let zipcode = tr
-                    .find(Class("cbUserListFC_cb_zipcode"))
-                    .next()
-                    .unwrap()
-                    .text();
-                let phone = tr
-                    .find(Class("cbUserListFC_cb_phone"))
-                    .next()
-                    .map(|node| node.text())
-                    .map(normalize_phone_number);
-                let email_id = tr
-                    .find(Class("cbMailRepl"))
-                    .next()
-                    .unwrap()
-                    .attr("id")
-                    .unwrap();
-                let undefined = "UNDEFINED".to_string();
-                let email = id_emails.get(email_id).unwrap_or(&undefined);
-                let email = normalize_email(email);
-
-                let user = User {
-                    name,
-                    member_status,
-                    trip_leader_status,
-                    position,
-                    address,
-                    city,
-                    state,
-                    zipcode,
-                    phone,
-                    email,
-                };
-
-                Ok(user)
-            })
+            .map(|tr| User::try_from((tr, &emails)))
             .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
 
         Ok(Users(members))
@@ -410,6 +341,86 @@ where
     S: AsRef<str>,
 {
     email.as_ref().to_lowercase()
+}
+
+type EmailIdTable = HashMap<String, String>;
+
+impl<'a> TryFrom<(Node<'a>, &EmailIdTable)> for User {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(tr_and_emails: (Node<'a>, &EmailIdTable)) -> Result<Self, Self::Error> {
+        let (tr, emails) = tr_and_emails;
+
+        let name = tr
+            .find(Class("cbUserListFC_formatname"))
+            .map(|node| node.text())
+            .next()
+            .unwrap_or_else(|| "UNDEFINED".to_string());
+        let member_status = tr
+            .find(Class("cbUserListFC_cb_memberstatus"))
+            .next()
+            .unwrap()
+            .text()
+            .parse()?;
+        let trip_leader_status =
+            match tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
+                Some(node) => Some(node.text().parse()?),
+                None => None,
+            };
+        let position = match tr.find(Class("cbUserListFC_cb_position")).next() {
+            Some(node) => Some(node.text().parse()?),
+            None => None,
+        };
+        let address = tr
+            .find(Class("cbUserListFC_cb_address"))
+            .next()
+            .unwrap()
+            .text();
+        let city = tr
+            .find(Class("cbUserListFC_cb_city"))
+            .next()
+            .unwrap()
+            .text();
+        let state = tr
+            .find(Class("cbUserListFC_cb_state"))
+            .next()
+            .unwrap()
+            .text();
+        let zipcode = tr
+            .find(Class("cbUserListFC_cb_zipcode"))
+            .next()
+            .unwrap()
+            .text();
+        let phone = tr
+            .find(Class("cbUserListFC_cb_phone"))
+            .next()
+            .map(|node| node.text())
+            .map(normalize_phone_number);
+        let email_id = tr
+            .find(Class("cbMailRepl"))
+            .next()
+            .unwrap()
+            .attr("id")
+            .unwrap();
+        let undefined = "UNDEFINED".to_string();
+        let email = emails.get(email_id).unwrap_or(&undefined);
+        let email = normalize_email(email);
+
+        let user = User {
+            name,
+            member_status,
+            trip_leader_status,
+            position,
+            address,
+            city,
+            state,
+            zipcode,
+            phone,
+            email,
+        };
+
+        Ok(user)
+    }
 }
 
 #[cfg(test)]
