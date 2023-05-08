@@ -320,7 +320,9 @@ impl TryFrom<Page> for Users {
         let tbody = document.find(Name("tbody")).next().unwrap();
         let members = tbody
             .find(Name("tr"))
-            .map(|tr| User::try_from((tr, &emails)))
+            .map(UserTableRow::from)
+            .filter(UserTableRow::is_user_account)
+            .map(|utr| User::try_from((utr, &emails)))
             .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
 
         Ok(Users(members))
@@ -343,60 +345,84 @@ where
     email.as_ref().to_lowercase()
 }
 
-type EmailIdTable = HashMap<String, String>;
+struct UserTableRow<'a> {
+    tr: Node<'a>,
+}
 
-impl<'a> TryFrom<(Node<'a>, &EmailIdTable)> for User {
-    type Error = Box<dyn std::error::Error>;
-
-    fn try_from(tr_and_emails: (Node<'a>, &EmailIdTable)) -> Result<Self, Self::Error> {
-        let (tr, emails) = tr_and_emails;
-
-        let name = tr
+impl UserTableRow<'_> {
+    fn name(&self) -> String {
+        self.tr
             .find(Class("cbUserListFC_formatname"))
             .map(|node| node.text())
             .next()
-            .unwrap_or_else(|| "UNDEFINED".to_string());
-        let member_status = tr
+            .unwrap_or_else(|| "UNDEFINED".to_string())
+    }
+
+    fn is_special_account(&self) -> bool {
+        self.name() == "SCMA Email"
+    }
+
+    fn is_user_account(&self) -> bool {
+        !self.is_special_account()
+    }
+}
+
+impl<'a> From<Node<'a>> for UserTableRow<'a> {
+    fn from(tr: Node<'a>) -> Self {
+        Self { tr }
+    }
+}
+
+type EmailIdTable = HashMap<String, String>;
+
+impl TryFrom<(UserTableRow<'_>, &EmailIdTable)> for User {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(user_and_emails: (UserTableRow<'_>, &EmailIdTable)) -> Result<Self, Self::Error> {
+        let (utr, emails) = user_and_emails;
+
+        let name = utr.name();
+        let member_status = utr.tr
             .find(Class("cbUserListFC_cb_memberstatus"))
             .next()
             .unwrap()
             .text()
             .parse()?;
         let trip_leader_status =
-            match tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
+            match utr.tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
                 Some(node) => Some(node.text().parse()?),
                 None => None,
             };
-        let position = match tr.find(Class("cbUserListFC_cb_position")).next() {
+        let position = match utr.tr.find(Class("cbUserListFC_cb_position")).next() {
             Some(node) => Some(node.text().parse()?),
             None => None,
         };
-        let address = tr
+        let address = utr.tr
             .find(Class("cbUserListFC_cb_address"))
             .next()
             .unwrap()
             .text();
-        let city = tr
+        let city = utr.tr
             .find(Class("cbUserListFC_cb_city"))
             .next()
             .unwrap()
             .text();
-        let state = tr
+        let state = utr.tr
             .find(Class("cbUserListFC_cb_state"))
             .next()
             .unwrap()
             .text();
-        let zipcode = tr
+        let zipcode = utr.tr
             .find(Class("cbUserListFC_cb_zipcode"))
             .next()
             .unwrap()
             .text();
-        let phone = tr
+        let phone = utr.tr
             .find(Class("cbUserListFC_cb_phone"))
             .next()
             .map(|node| node.text())
             .map(normalize_phone_number);
-        let email_id = tr
+        let email_id = utr.tr
             .find(Class("cbMailRepl"))
             .next()
             .unwrap()
