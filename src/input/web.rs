@@ -11,28 +11,26 @@ use tracing::info;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-const LOGIN_PATH: &str = "/index.php/component/comprofiler/login";
-const EVENTS_PATH: &str = "/index.php/event-list/events-list?format=json";
-const USERS_PATH: &str = "/index.php?option=com_comprofiler&task=usersList&listid=5";
+const SITE_URL: &str = "https://www.rockclimbing.org";
+const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
+const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
+const USERS_URL: &str = "https://www.rockclimbing.org/index.php?option=com_comprofiler&task=usersList&listid=5";
 const CONCURRENT_REQUESTS: usize = 3;
 
-pub struct Web<'a> {
-    base_url: &'a str,
+pub struct Web {
     dates: DateSelect,
     client: reqwest::Client,
 }
 
-impl<'a> Web<'a> {
+impl Web {
     pub async fn new(
         username: &str,
         password: &str,
-        base_url: &'a str,
         dates: DateSelect,
-    ) -> Result<Web<'a>, Box<dyn std::error::Error>> {
+    ) -> Result<Web, Box<dyn std::error::Error>> {
         let client = Self::create_client()?;
 
         let web = Self {
-            base_url,
             dates,
             client,
         };
@@ -50,13 +48,13 @@ impl<'a> Web<'a> {
 
     pub async fn fetch_events(&self) -> Result<Vec<Event>, Box<dyn std::error::Error>> {
         let events_url = match self.dates {
-            DateSelect::All => [self.base_url, EVENTS_PATH].join(""),
-            DateSelect::NotPast => [self.base_url, EVENTS_PATH, "&filterEvents=notpast"].join(""),
+            DateSelect::All => EVENTS_URL.to_string(),
+            DateSelect::NotPast => [EVENTS_URL, "&filterEvents=notpast"].join(""),
         };
 
         info!(url=%events_url, "Fetching event list page");
         let events_page = Page::from_url(&self.client, &events_url).await?;
-        let events = EventList::try_from((self.base_url, events_page))?.into_inner();
+        let events = EventList::try_from(events_page)?.into_inner();
 
         Ok(events)
     }
@@ -74,7 +72,7 @@ impl<'a> Web<'a> {
     }
 
     async fn login(&self, username: &str, password: &str) -> anyhow::Result<()> {
-        let url = [self.base_url, LOGIN_PATH].join("");
+        let url = LOGIN_URL;
 
         info!(%url, "Logging in");
 
@@ -85,17 +83,17 @@ impl<'a> Web<'a> {
             .form(&login_params)
             .send()
             .await
-            .with_context(|| format!("unable to login to {} due to bad request", self.base_url))?;
+            .with_context(|| format!("unable to login to {} due to bad request", SITE_URL))?;
 
         if !rsp.status().is_success() {
             Err(anyhow!(
                 "unable to login to {} due to bad response",
-                self.base_url
+                SITE_URL
             ))
         } else if rsp.url().path() != "/" {
             Err(anyhow!(
                 "unable to login to {} due to bad username or password",
-                self.base_url
+                SITE_URL
             ))
         } else {
             Ok(())
@@ -128,7 +126,7 @@ impl<'a> Web<'a> {
     }
 
     pub async fn fetch_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error>> {
-        let url = [self.base_url, USERS_PATH].join("");
+        let url = USERS_URL;
 
         info!(url=%url, "Fetching users");
         let page = Page::from_url(&self.client, &url).await?;
@@ -268,16 +266,14 @@ impl EventList {
     }
 }
 
-impl TryFrom<(&str, Page)> for EventList {
+impl TryFrom<Page> for EventList {
     type Error = Box<dyn std::error::Error>;
 
-    fn try_from(url_page: (&str, Page)) -> Result<Self, Self::Error> {
-        let (base_url, page) = url_page;
-
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
         let events = serde_json::from_str::<Vec<Event>>(page.as_ref())?.tap_mut(|events| {
             events
                 .iter_mut()
-                .for_each(|event| event.url = [base_url, &event.url].join(""))
+                .for_each(|event| event.url = [SITE_URL, &event.url].join(""))
         });
 
         Ok(Self(events))
@@ -463,8 +459,7 @@ mod test {
     fn parse_event_list_json() {
         let path = path_to_input("events-list.json");
         let page = Page::from_file(path).unwrap();
-        let base_url = "https://www.rockclimbing.org";
-        let events = EventList::try_from((base_url, page)).unwrap();
+        let events = EventList::try_from(page).unwrap();
         insta::assert_yaml_snapshot!(events);
     }
 

@@ -8,7 +8,6 @@ use tracing_subscriber::EnvFilter;
 
 use std::collections::HashMap;
 
-const BASE_URL: &str = "https://www.rockclimbing.org";
 const CONCURRENT_REQUESTS: usize = 3;
 
 #[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
@@ -260,7 +259,7 @@ async fn process_events(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             let events = match args.input {
                 InputType::Web => {
-                    Web::new(&args.username, &args.password, BASE_URL, dates)
+                    Web::new(&args.username, &args.password, dates)
                         .await?
                         .read()
                         .await?
@@ -310,7 +309,6 @@ async fn process_users(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
             Web::new(
                 &args.username,
                 &args.password,
-                BASE_URL,
                 DateSelect::NotPast,
             )
             .await?
@@ -379,7 +377,7 @@ async fn process_users(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
 
 async fn scma_to_gcal(
     event: Event,
-    web: &Web<'_>,
+    web: &Web,
     gcal: &GCal,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let event = web.fetch_event_details(event).await?;
@@ -390,8 +388,8 @@ async fn web_events<'a>(
     username: &str,
     password: &str,
     dates: DateSelect,
-) -> Result<(Web<'a>, Vec<Event>), Box<dyn std::error::Error>> {
-    let web = Web::new(username, password, BASE_URL, dates).await?;
+) -> Result<(Web, Vec<Event>), Box<dyn std::error::Error>> {
+    let web = Web::new(username, password, dates).await?;
     let events = web.fetch_events().await?;
     Ok((web, events))
 }
