@@ -27,6 +27,7 @@ jobs:
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+          RUST_BACKTRACE: 1
         run: ./scma-gcal-sync events --input web --output gcal --calendar SCMA --auth-type service-account --secret-file secret-service-account.json
       - name: Populate email aliases
         env:
@@ -38,4 +39,5 @@ jobs:
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
+          RUST_BACKTRACE: 1
         run: ./scma-gcal-sync users --input web --output gcal --calendar SCMA --email-aliases-file email-aliases.yml --auth-type service-account --secret-file secret-service-account.json --notify-acl-insert true
