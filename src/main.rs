@@ -306,14 +306,10 @@ async fn process_events(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
 async fn process_users(args: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let users = match args.input {
         InputType::Web => {
-            Web::new(
-                &args.username,
-                &args.password,
-                DateSelect::NotPast,
-            )
-            .await?
-            .fetch_users()
-            .await?
+            Web::new(&args.username, &args.password, DateSelect::NotPast)
+                .await?
+                .fetch_users()
+                .await?
         }
         InputType::Yaml => {
             info!(input=?args.input_file, "Reading users");

@@ -14,8 +14,10 @@ use std::convert::TryFrom;
 
 const SITE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
-const EVENTS_URL: &str = "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
-const USERS_URL: &str = "https://www.rockclimbing.org/index.php?option=com_comprofiler&task=usersList&listid=5";
+const EVENTS_URL: &str =
+    "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
+const USERS_URL: &str =
+    "https://www.rockclimbing.org/index.php?option=com_comprofiler&task=usersList&listid=5";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web {
@@ -31,10 +33,7 @@ impl Web {
     ) -> Result<Web, Box<dyn std::error::Error>> {
         let client = Self::create_client()?;
 
-        let web = Self {
-            dates,
-            client,
-        };
+        let web = Self { dates, client };
 
         web.login(username, password).await?;
 
@@ -130,7 +129,7 @@ impl Web {
         let url = USERS_URL;
 
         info!(url=%url, "Fetching users");
-        let page = Page::from_url(&self.client, &url).await?;
+        let page = Page::from_url(&self.client, url).await?;
         let users = Users::try_from(page)?;
 
         Ok(users.0)
@@ -382,47 +381,57 @@ impl TryFrom<(UserTableRow<'_>, &EmailIdTable)> for User {
         let (utr, emails) = user_and_emails;
 
         let name = utr.name();
-        let member_status = utr.tr
+        let member_status = utr
+            .tr
             .find(Class("cbUserListFC_cb_memberstatus"))
             .next()
             .unwrap()
             .text()
             .parse()?;
-        let trip_leader_status =
-            match utr.tr.find(Class("cbUserListFC_cb_tripleaderstatus")).next() {
-                Some(node) => Some(node.text().parse()?),
-                None => None,
-            };
+        let trip_leader_status = match utr
+            .tr
+            .find(Class("cbUserListFC_cb_tripleaderstatus"))
+            .next()
+        {
+            Some(node) => Some(node.text().parse()?),
+            None => None,
+        };
         let position = match utr.tr.find(Class("cbUserListFC_cb_position")).next() {
             Some(node) => Some(node.text().parse()?),
             None => None,
         };
-        let address = utr.tr
+        let address = utr
+            .tr
             .find(Class("cbUserListFC_cb_address"))
             .next()
             .unwrap()
             .text();
-        let city = utr.tr
+        let city = utr
+            .tr
             .find(Class("cbUserListFC_cb_city"))
             .next()
             .unwrap()
             .text();
-        let state = utr.tr
+        let state = utr
+            .tr
             .find(Class("cbUserListFC_cb_state"))
             .next()
             .unwrap()
             .text();
-        let zipcode = utr.tr
+        let zipcode = utr
+            .tr
             .find(Class("cbUserListFC_cb_zipcode"))
             .next()
             .unwrap()
             .text();
-        let phone = utr.tr
+        let phone = utr
+            .tr
             .find(Class("cbUserListFC_cb_phone"))
             .next()
             .map(|node| node.text())
             .map(normalize_phone_number);
-        let email_id = utr.tr
+        let email_id = utr
+            .tr
             .find(Class("cbMailRepl"))
             .next()
             .unwrap()
