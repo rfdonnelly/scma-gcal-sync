@@ -28,6 +28,20 @@ pub struct Event {
     pub timestamp: Option<DateTime<Utc>>,
 }
 
+impl Event {
+    pub fn timestamp(&self) -> String {
+        if let Some(timestamp) = self.timestamp {
+            let pacific = chrono::FixedOffset::west_opt(8 * 60 * 60).unwrap();
+            timestamp
+                .with_timezone(&pacific)
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, false)
+                .to_string()
+        } else {
+            "".to_string()
+        }
+    }
+}
+
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({}/{})", self.title, self.start_date, self.end_date)
@@ -157,6 +171,8 @@ pub struct User {
     pub zipcode: String,
     pub phone: Option<String>,
     pub email: String,
+    /// The date and time the event page was downloaded.
+    pub timestamp: Option<DateTime<Utc>>,
 }
 
 impl User {
@@ -169,5 +185,17 @@ impl User {
             "{}, {}, {} {}",
             self.address, self.city, self.state, self.zipcode
         )
+    }
+
+    pub fn timestamp(&self) -> String {
+        if let Some(timestamp) = self.timestamp {
+            let pacific = chrono::FixedOffset::west_opt(8 * 60 * 60).unwrap();
+            timestamp
+                .with_timezone(&pacific)
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, false)
+                .to_string()
+        } else {
+            "".to_string()
+        }
     }
 }

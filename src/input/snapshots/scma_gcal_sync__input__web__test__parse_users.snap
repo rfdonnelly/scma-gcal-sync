@@ -1,8 +1,7 @@
 ---
 source: src/input/web.rs
-assertion_line: 460
+assertion_line: 480
 expression: users
-
 ---
 - name: John Doe
   member_status: RM
@@ -14,6 +13,7 @@ expression: users
   zipcode: "55555"
   phone: "+15555555555"
   email: johndoe@gmail.com
+  timestamp: ~
 - name: Jane Doe
   member_status: HM
   trip_leader_status: S2
@@ -24,6 +24,7 @@ expression: users
   zipcode: "55555"
   phone: "+11234567890"
   email: jane.doe@gmail.com
+  timestamp: ~
 - name: First Last
   member_status: Student
   trip_leader_status: ~
@@ -34,4 +35,5 @@ expression: users
   zipcode: "55553"
   phone: "+15555555554"
   email: first.last@gmail.com
+  timestamp: ~
 
