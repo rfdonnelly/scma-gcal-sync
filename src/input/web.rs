@@ -440,6 +440,7 @@ impl TryFrom<(UserTableRow<'_>, &EmailIdTable)> for User {
         let undefined = "UNDEFINED".to_string();
         let email = emails.get(email_id).unwrap_or(&undefined);
         let email = normalize_email(email);
+        let timestamp = Some(Utc::now());
 
         let user = User {
             name,
@@ -452,6 +453,7 @@ impl TryFrom<(UserTableRow<'_>, &EmailIdTable)> for User {
             zipcode,
             phone,
             email,
+            timestamp,
         };
 
         Ok(user)
@@ -513,7 +515,9 @@ mod test {
     fn parse_users() {
         let path = path_to_input("users.html");
         let page = Page::from_file(path).unwrap();
-        let users = Users::try_from(page).unwrap();
+        let users = Users::try_from(page).unwrap().tap_mut(|users| {
+            users.0.iter_mut().for_each(|user| user.timestamp = None);
+        });
         insta::assert_yaml_snapshot!(users);
     }
 

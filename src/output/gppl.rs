@@ -22,6 +22,7 @@ const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
 const SCMA_MEMBER_STATUS_KEY: &str = "SCMA Member Status";
 const SCMA_TRIP_LEADER_STATUS_KEY: &str = "SCMA Trip Leader Status";
 const SCMA_POSITION_KEY: &str = "SCMA Position";
+const SCMA_LAST_UPDATED_KEY: &str = "SCMA Last Updated";
 
 /// Synchronizes SCMA members with Google Contacts using the algorithm below.
 ///
@@ -557,6 +558,14 @@ fn create_api_trip_leader_status(user: &User) -> api::UserDefined {
     }
 }
 
+fn create_api_last_updated(user: &User) -> api::UserDefined {
+    api::UserDefined {
+        key: Some(SCMA_LAST_UPDATED_KEY.to_string()),
+        value: Some(user.timestamp()),
+        ..Default::default()
+    }
+}
+
 fn create_api_position(user: &User) -> api::UserDefined {
     api::UserDefined {
         key: Some(SCMA_POSITION_KEY.to_string()),
@@ -603,6 +612,7 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
     let member_status = create_api_member_status(user);
     let trip_leader_status = create_api_trip_leader_status(user);
     let position = create_api_position(user);
+    let last_updated = create_api_last_updated(user);
 
     api::Person {
         names: Some(vec![name]),
@@ -610,7 +620,12 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
         addresses: Some(vec![address]),
         phone_numbers: Some(vec![phone_number]),
         memberships: Some(vec![membership]),
-        user_defined: Some(vec![member_status, trip_leader_status, position]),
+        user_defined: Some(vec![
+            member_status,
+            trip_leader_status,
+            position,
+            last_updated,
+        ]),
         ..Default::default()
     }
 }
@@ -687,6 +702,7 @@ fn person_user_defined_update_or_insert(
             user.trip_leader_status(),
         );
         user_defined.insert(SCMA_POSITION_KEY.to_string(), user.position());
+        user_defined.insert(SCMA_LAST_UPDATED_KEY.to_string(), user.timestamp());
     })
     .into_iter()
     .map(|(k, v)| api::UserDefined {
