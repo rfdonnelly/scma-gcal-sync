@@ -11,13 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download latest release
-        uses: robinraju/release-downloader@v1.7
+        uses: robinraju/release-downloader@v1.8
         with:
           repository: rfdonnelly/scma-gcal-sync
           latest: true
-          fileName: scma-gcal-sync
-      - name: Set execute permissions
-        run: chmod +x scma-gcal-sync
+          fileName: scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz
+      - name: Extract release
+        run: |
+          tar xf scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync
+          mv scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync scma-gcal-sync
       - name: Populate credentials
         env:
           GOOGLE_OAUTH_CLIENT_SECRET_JSON: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_JSON }}

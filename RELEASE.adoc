@@ -3,31 +3,27 @@
 This project uses https://opensource.axo.dev/cargo-dist/book/[cargo-dist].
 Creating a release is mostly as simple as creating and pushing a release tag.
 
-== Bump Version
-
-NOTE: This requires `cargo-edit`.
+== Define Version
 
  version=x.y.z
 
+== Set Version
+
+NOTE: This requires `cargo-edit`.
+
  cargo set-version $version
+
+== Commit and Push
+
  git add Cargo.toml Cargo.lock
  git commit
+ git push
+
+== Tag and Push
+
  git tag v$version
  git push origin v$version
 
-== Build
+== Relax
 
-The GitHub Actions cron jobs for syncing events and contacts do not currently use the releases created by `cargo-dist`.
-Instead, they use a manually built release.
-We use Docker to build w/ a GitHub Actions compatible distro.
-That is, to build a release binary that will run in the environment provided by GitHub Actions.
-
- docker run -it --rm -u $(id -u):$(id -g) -v $PWD:/work -w /work rust cargo build --release
-
-== Upload
-
-Upload the `target/release/scma-gcal-sync` as is to the GitHub Release created by `cargo-dist`.
-
-== Publish
-
-Publish the GitHub Release created by `cargo-dist`.
+Sit back a relax while `cargo-dist` automatically creates a GitHub Release and releaes binaries for each platform.

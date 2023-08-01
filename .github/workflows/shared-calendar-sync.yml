@@ -16,7 +16,7 @@ jobs:
           repository: rfdonnelly/scma-gcal-sync
           latest: true
           fileName: scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz
-      - name: Extract
+      - name: Extract release
         run: |
           tar xf scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync
           mv scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync scma-gcal-sync
