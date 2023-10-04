@@ -1398,7 +1398,7 @@ dependencies = [
 
 [[package]]
 name = "scma-gcal-sync"
-version = "2.2.1"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "chrono",
