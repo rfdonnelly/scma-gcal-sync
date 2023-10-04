@@ -1,9 +1,10 @@
 ---
 source: src/input/web.rs
-assertion_line: 480
+assertion_line: 384
 expression: users
 ---
-- name: John Doe
+- id: ""
+  name: John Doe
   member_status: RM
   trip_leader_status: S1
   position: ~
@@ -13,8 +14,24 @@ expression: users
   zipcode: "55555"
   phone: "+15555555555"
   email: johndoe@gmail.com
+  climbingtypes: ~
+  lead: ~
+  follow: ~
+  favoriteclimbs: ~
+  referredby: ~
+  dob: ~
+  applicantdate: ~
+  membersince: ~
+  resignedmembership: ~
+  sex: ~
+  caneval: false
+  optedout: false
+  block: false
+  register_date: ""
+  lastvisit_date: ""
   timestamp: ~
-- name: Jane Doe
+- id: ""
+  name: Jane Doe
   member_status: HM
   trip_leader_status: S2
   position: Director
@@ -24,8 +41,24 @@ expression: users
   zipcode: "55555"
   phone: "+11234567890"
   email: jane.doe@gmail.com
+  climbingtypes: ~
+  lead: ~
+  follow: ~
+  favoriteclimbs: ~
+  referredby: ~
+  dob: ~
+  applicantdate: ~
+  membersince: ~
+  resignedmembership: ~
+  sex: ~
+  caneval: false
+  optedout: false
+  block: false
+  register_date: ""
+  lastvisit_date: ""
   timestamp: ~
-- name: First Last
+- id: ""
+  name: First Last
   member_status: Student
   trip_leader_status: ~
   position: ~
@@ -35,5 +68,20 @@ expression: users
   zipcode: "55553"
   phone: "+15555555554"
   email: first.last@gmail.com
+  climbingtypes: ~
+  lead: ~
+  follow: ~
+  favoriteclimbs: ~
+  referredby: ~
+  dob: ~
+  applicantdate: ~
+  membersince: ~
+  resignedmembership: ~
+  sex: ~
+  caneval: false
+  optedout: false
+  block: false
+  register_date: ""
+  lastvisit_date: ""
   timestamp: ~
 

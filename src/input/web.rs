@@ -4,20 +4,17 @@ use anyhow::{anyhow, Context};
 use chrono::{DateTime, Utc};
 use futures::{stream, StreamExt, TryStreamExt};
 use select::document::Document;
-use select::node::Node;
 use select::predicate::{And, Attr, Class, Name};
 use tap::prelude::*;
 use tracing::info;
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
 const SITE_URL: &str = "https://www.rockclimbing.org";
 const LOGIN_URL: &str = "https://www.rockclimbing.org/index.php/component/comprofiler/login";
 const EVENTS_URL: &str =
     "https://www.rockclimbing.org/index.php/event-list/events-list?format=json";
-const USERS_URL: &str =
-    "https://www.rockclimbing.org/index.php?option=com_comprofiler&task=usersList&listid=5";
+const USERS_URL: &str = "https://www.rockclimbing.org/index.php?option=com_jsondumper";
 const CONCURRENT_REQUESTS: usize = 3;
 
 pub struct Web {
@@ -293,38 +290,19 @@ impl TryFrom<Page> for Users {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
-        let mut email: Option<String> = None;
-        let mut emails: EmailIdTable = HashMap::new();
-
-        for line in page.as_ref().lines() {
-            let trimmed = line.trim_start();
-            if trimmed.starts_with("var addy") {
-                let (_, right) = trimmed.split_once("= '").unwrap();
-                let (obfuscated, _) = right.split_once("';").unwrap();
-                let obfuscated = obfuscated.replace("'+ '", "");
-                let obfuscated = obfuscated.replace("' + '", "");
-                let obfuscated = obfuscated.replace("' +'", "");
-                email = Some(html_escape::decode_html_entities(&obfuscated).to_string());
-            } else if trimmed.starts_with("$('#cbMa") {
-                let (_, right) = trimmed.split_once("$('#").unwrap();
-                let (id, _) = right.split_once("')").unwrap();
-
-                emails.insert(id.to_string(), email.take().unwrap().clone());
-            } else if trimmed.contains("cbUserURLs") {
-                break;
-            }
+        use serde::Deserialize;
+        #[derive(Deserialize)]
+        struct Data {
+            users: Vec<User>,
         }
 
-        let document = Document::from(page.as_ref());
-        let tbody = document.find(Name("tbody")).next().unwrap();
-        let members = tbody
-            .find(Name("tr"))
-            .map(UserTableRow::from)
-            .filter(UserTableRow::is_user_account)
-            .map(|utr| User::try_from((utr, &emails)))
-            .collect::<Result<Vec<User>, Box<dyn std::error::Error>>>()?;
-
-        Ok(Users(members))
+        let mut data: Data = serde_json::from_str::<Data>(page.as_ref())?;
+        data.users.iter_mut().for_each(|user| {
+            user.phone = user.phone.as_ref().map(normalize_phone_number);
+            user.email = normalize_email(&user.email);
+            user.timestamp = Some(Utc::now());
+        });
+        Ok(Users(data.users))
     }
 }
 
@@ -342,122 +320,6 @@ where
     S: AsRef<str>,
 {
     email.as_ref().to_lowercase()
-}
-
-struct UserTableRow<'a> {
-    tr: Node<'a>,
-}
-
-impl UserTableRow<'_> {
-    fn name(&self) -> String {
-        self.tr
-            .find(Class("cbUserListFC_formatname"))
-            .map(|node| node.text())
-            .next()
-            .unwrap_or_else(|| "UNDEFINED".to_string())
-    }
-
-    fn is_special_account(&self) -> bool {
-        self.name() == "SCMA Email"
-    }
-
-    fn is_user_account(&self) -> bool {
-        !self.is_special_account()
-    }
-}
-
-impl<'a> From<Node<'a>> for UserTableRow<'a> {
-    fn from(tr: Node<'a>) -> Self {
-        Self { tr }
-    }
-}
-
-type EmailIdTable = HashMap<String, String>;
-
-impl TryFrom<(UserTableRow<'_>, &EmailIdTable)> for User {
-    type Error = Box<dyn std::error::Error>;
-
-    fn try_from(user_and_emails: (UserTableRow<'_>, &EmailIdTable)) -> Result<Self, Self::Error> {
-        let (utr, emails) = user_and_emails;
-
-        let name = utr.name();
-        let member_status = utr
-            .tr
-            .find(Class("cbUserListFC_cb_memberstatus"))
-            .next()
-            .unwrap()
-            .text()
-            .parse()?;
-        let trip_leader_status = match utr
-            .tr
-            .find(Class("cbUserListFC_cb_tripleaderstatus"))
-            .next()
-        {
-            Some(node) => Some(node.text().parse()?),
-            None => None,
-        };
-        let position = match utr.tr.find(Class("cbUserListFC_cb_position")).next() {
-            Some(node) => Some(node.text().parse()?),
-            None => None,
-        };
-        let address = utr
-            .tr
-            .find(Class("cbUserListFC_cb_address"))
-            .next()
-            .unwrap()
-            .text();
-        let city = utr
-            .tr
-            .find(Class("cbUserListFC_cb_city"))
-            .next()
-            .unwrap()
-            .text();
-        let state = utr
-            .tr
-            .find(Class("cbUserListFC_cb_state"))
-            .next()
-            .unwrap()
-            .text();
-        let zipcode = utr
-            .tr
-            .find(Class("cbUserListFC_cb_zipcode"))
-            .next()
-            .unwrap()
-            .text();
-        let phone = utr
-            .tr
-            .find(Class("cbUserListFC_cb_phone"))
-            .next()
-            .map(|node| node.text())
-            .map(normalize_phone_number);
-        let email_id = utr
-            .tr
-            .find(Class("cbMailRepl"))
-            .next()
-            .unwrap()
-            .attr("id")
-            .unwrap();
-        let undefined = "UNDEFINED".to_string();
-        let email = emails.get(email_id).unwrap_or(&undefined);
-        let email = normalize_email(email);
-        let timestamp = Some(Utc::now());
-
-        let user = User {
-            name,
-            member_status,
-            trip_leader_status,
-            position,
-            address,
-            city,
-            state,
-            zipcode,
-            phone,
-            email,
-            timestamp,
-        };
-
-        Ok(user)
-    }
 }
 
 #[cfg(test)]
@@ -513,7 +375,7 @@ mod test {
 
     #[test]
     fn parse_users() {
-        let path = path_to_input("users.html");
+        let path = path_to_input("users.json");
         let page = Page::from_file(path).unwrap();
         let users = Users::try_from(page).unwrap().tap_mut(|users| {
             users.0.iter_mut().for_each(|user| user.timestamp = None);
