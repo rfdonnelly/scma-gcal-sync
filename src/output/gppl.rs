@@ -548,6 +548,28 @@ fn insert_user_defined(user_defined: &mut IndexMap<String, String>, user: &User)
         &user.trip_leader_status.as_ref().map(|v| v.to_string()),
     );
     insert_or_remove_user_defined(user_defined, "SCMA Position", &user.position);
+    insert_or_remove_user_defined(user_defined, "SCMA Climbing Types", &user.climbingtypes);
+    insert_or_remove_user_defined(user_defined, "SCMA Lead", &user.lead);
+    insert_or_remove_user_defined(user_defined, "SCMA Follow", &user.follow);
+    insert_or_remove_user_defined(user_defined, "SCMA Favorite Climbs", &user.favoriteclimbs);
+    insert_or_remove_user_defined(user_defined, "SCMA Referred By", &user.referredby);
+    insert_or_remove_user_defined(user_defined, "SCMA Date of Birth", &user.dob);
+    insert_or_remove_user_defined(user_defined, "SCMA Applicant Date", &user.applicantdate);
+    insert_or_remove_user_defined(user_defined, "SCMA Sex", &user.sex);
+    insert_or_remove_user_defined(user_defined, "SCMA Member Since", &user.membersince);
+    insert_or_remove_user_defined(
+        user_defined,
+        "SCMA Resigned Since",
+        &user.resignedmembership,
+    );
+    user_defined.insert(
+        "SCMA Registered Date".to_string(),
+        user.register_date.clone(),
+    );
+    user_defined.insert(
+        "SCMA Last Visit Date".to_string(),
+        user.lastvisit_date.clone(),
+    );
     user_defined.insert("SCMA Last Updated".to_string(), user.timestamp());
 }
 
