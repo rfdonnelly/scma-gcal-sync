@@ -19,11 +19,6 @@ const GROUP_FIELDS: &str = "name";
 const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
 const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
 
-const SCMA_MEMBER_STATUS_KEY: &str = "SCMA Member Status";
-const SCMA_TRIP_LEADER_STATUS_KEY: &str = "SCMA Trip Leader Status";
-const SCMA_POSITION_KEY: &str = "SCMA Position";
-const SCMA_LAST_UPDATED_KEY: &str = "SCMA Last Updated";
-
 /// Synchronizes SCMA members with Google Contacts using the algorithm below.
 ///
 /// 1. Find the ContactGroup.resourceName by name using the contactGroups.list API method
@@ -542,52 +537,51 @@ fn create_api_phone_number(user: &User) -> api::PhoneNumber {
     }
 }
 
-fn create_api_member_status(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_MEMBER_STATUS_KEY.to_string()),
-        value: Some(user.member_status.to_string()),
-        ..Default::default()
-    }
+fn insert_user_defined(user_defined: &mut IndexMap<String, String>, user: &User) {
+    user_defined.insert(
+        "SCMA Member Status".to_string(),
+        user.member_status.to_string(),
+    );
+    insert_or_remove_user_defined(
+        user_defined,
+        "SCMA Trip Leader Status",
+        &user.trip_leader_status.as_ref().map(|v| v.to_string()),
+    );
+    insert_or_remove_user_defined(user_defined, "SCMA Position", &user.position);
+    insert_or_remove_user_defined(user_defined, "SCMA Climbing Types", &user.climbingtypes);
+    insert_or_remove_user_defined(user_defined, "SCMA Lead", &user.lead);
+    insert_or_remove_user_defined(user_defined, "SCMA Follow", &user.follow);
+    insert_or_remove_user_defined(user_defined, "SCMA Favorite Climbs", &user.favoriteclimbs);
+    insert_or_remove_user_defined(user_defined, "SCMA Referred By", &user.referredby);
+    insert_or_remove_user_defined(user_defined, "SCMA Date of Birth", &user.dob);
+    insert_or_remove_user_defined(user_defined, "SCMA Applicant Date", &user.applicantdate);
+    insert_or_remove_user_defined(user_defined, "SCMA Sex", &user.sex);
+    insert_or_remove_user_defined(user_defined, "SCMA Member Since", &user.membersince);
+    insert_or_remove_user_defined(
+        user_defined,
+        "SCMA Resigned Since",
+        &user.resignedmembership,
+    );
+    user_defined.insert(
+        "SCMA Registered Date".to_string(),
+        user.register_date.clone(),
+    );
+    user_defined.insert(
+        "SCMA Last Visit Date".to_string(),
+        user.lastvisit_date.clone(),
+    );
+    user_defined.insert("SCMA Last Updated".to_string(), user.timestamp());
 }
 
-fn create_api_trip_leader_status(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_TRIP_LEADER_STATUS_KEY.to_string()),
-        value: Some(user.trip_leader_status()),
-        ..Default::default()
-    }
-}
-
-fn create_api_last_updated(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_LAST_UPDATED_KEY.to_string()),
-        value: Some(user.timestamp()),
-        ..Default::default()
-    }
-}
-
-fn create_api_position(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_POSITION_KEY.to_string()),
-        value: Some(user.position()),
-        ..Default::default()
-    }
-}
-
-impl User {
-    fn trip_leader_status(&self) -> String {
-        self.trip_leader_status
-            .as_ref()
-            .map(|status| status.to_string())
-            .unwrap_or_else(|| "n/a".to_string())
-    }
-
-    fn position(&self) -> String {
-        self.position
-            .as_ref()
-            .map(|position| position.to_string())
-            .unwrap_or_else(|| "n/a".to_string())
-    }
+fn insert_or_remove_user_defined(
+    user_defined: &mut IndexMap<String, String>,
+    key: &str,
+    value: &Option<String>,
+) {
+    match value {
+        Some(value) => user_defined.insert(key.to_string(), value.to_string()),
+        None => user_defined.remove(key),
+    };
 }
 
 fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
@@ -609,10 +603,6 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
         }),
         ..Default::default()
     };
-    let member_status = create_api_member_status(user);
-    let trip_leader_status = create_api_trip_leader_status(user);
-    let position = create_api_position(user);
-    let last_updated = create_api_last_updated(user);
 
     api::Person {
         names: Some(vec![name]),
@@ -620,12 +610,7 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
         addresses: Some(vec![address]),
         phone_numbers: Some(vec![phone_number]),
         memberships: Some(vec![membership]),
-        user_defined: Some(vec![
-            member_status,
-            trip_leader_status,
-            position,
-            last_updated,
-        ]),
+        user_defined: person_user_defined_update_or_insert(user, None),
         ..Default::default()
     }
 }
@@ -676,6 +661,10 @@ fn person_addresses_update_or_insert(
     }
 }
 
+// This function is used for both creating a new Person and for updating an existing Person.
+// In the new-Person (user_define==None) case, this function does more than it needs to but that is
+// fine.  In the existing-Person (user_define==Some(...)) case, the existing entries will be
+// updated.
 fn person_user_defined_update_or_insert(
     user: &User,
     user_defined: Option<Vec<api::UserDefined>>,
@@ -693,16 +682,7 @@ fn person_user_defined_update_or_insert(
         None => IndexMap::new(),
     }
     .tap_mut(|user_defined| {
-        user_defined.insert(
-            SCMA_MEMBER_STATUS_KEY.to_string(),
-            user.member_status.to_string(),
-        );
-        user_defined.insert(
-            SCMA_TRIP_LEADER_STATUS_KEY.to_string(),
-            user.trip_leader_status(),
-        );
-        user_defined.insert(SCMA_POSITION_KEY.to_string(), user.position());
-        user_defined.insert(SCMA_LAST_UPDATED_KEY.to_string(), user.timestamp());
+        insert_user_defined(user_defined, user);
     })
     .into_iter()
     .map(|(k, v)| api::UserDefined {

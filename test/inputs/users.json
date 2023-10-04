@@ -1,0 +1,47 @@
+{
+  "count": 3,
+  "users": [
+    {
+      "id": "",
+      "name": "John Doe",
+      "email": "johndoe@gmail.com",
+      "registerDate": "",
+      "lastvisitDate": "",
+      "memberstatus": "RM",
+      "address": "1234 Example Dr",
+      "city": "A City",
+      "state": "CA",
+      "zipcode": "55555",
+      "phone": "555-555-5555",
+      "tripleaderstatus": "S1"
+    },
+    {
+      "id": "",
+      "name": "Jane Doe",
+      "email": "jane.doe@gmail.com",
+      "registerDate": "",
+      "lastvisitDate": "",
+      "memberstatus": "HM",
+      "address": "6789 Example St",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zipcode": "55555",
+      "phone": "1234567890",
+      "position": "Director",
+      "tripleaderstatus": "S2"
+    },
+    {
+      "id": "",
+      "name": "First Last",
+      "email": "first.last@gmail.com",
+      "registerDate": "",
+      "lastvisitDate": "",
+      "memberstatus": "Student",
+      "address": "4321 Example Ct",
+      "city": "Another City",
+      "state": "CA",
+      "zipcode": "55553",
+      "phone": "(555) 555-5554"
+    }
+  ]
+}

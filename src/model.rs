@@ -161,8 +161,11 @@ impl fmt::Display for TripLeaderStatus {
 
 #[derive(Debug, Default, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize)]
 pub struct User {
+    pub id: String,
     pub name: String,
+    #[serde(alias = "memberstatus")]
     pub member_status: MemberStatus,
+    #[serde(alias = "tripleaderstatus")]
     pub trip_leader_status: Option<TripLeaderStatus>,
     pub position: Option<String>,
     pub address: String,
@@ -171,6 +174,26 @@ pub struct User {
     pub zipcode: String,
     pub phone: Option<String>,
     pub email: String,
+    pub climbingtypes: Option<String>,
+    pub lead: Option<String>,
+    pub follow: Option<String>,
+    pub favoriteclimbs: Option<String>,
+    pub referredby: Option<String>,
+    pub dob: Option<String>,
+    pub applicantdate: Option<String>,
+    pub membersince: Option<String>,
+    pub resignedmembership: Option<String>,
+    pub sex: Option<String>,
+    #[serde(default)]
+    pub caneval: bool,
+    #[serde(default)]
+    pub optedout: bool,
+    #[serde(default)]
+    pub block: bool,
+    #[serde(alias = "registerDate")]
+    pub register_date: String,
+    #[serde(alias = "lastvisitDate")]
+    pub lastvisit_date: String,
     /// The date and time the event page was downloaded.
     pub timestamp: Option<DateTime<Utc>>,
 }
