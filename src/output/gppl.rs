@@ -542,38 +542,6 @@ fn create_api_phone_number(user: &User) -> api::PhoneNumber {
     }
 }
 
-fn create_api_member_status(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_MEMBER_STATUS_KEY.to_string()),
-        value: Some(user.member_status.to_string()),
-        ..Default::default()
-    }
-}
-
-fn create_api_trip_leader_status(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_TRIP_LEADER_STATUS_KEY.to_string()),
-        value: Some(user.trip_leader_status()),
-        ..Default::default()
-    }
-}
-
-fn create_api_last_updated(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_LAST_UPDATED_KEY.to_string()),
-        value: Some(user.timestamp()),
-        ..Default::default()
-    }
-}
-
-fn create_api_position(user: &User) -> api::UserDefined {
-    api::UserDefined {
-        key: Some(SCMA_POSITION_KEY.to_string()),
-        value: Some(user.position()),
-        ..Default::default()
-    }
-}
-
 impl User {
     fn trip_leader_status(&self) -> String {
         self.trip_leader_status
@@ -609,10 +577,6 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
         }),
         ..Default::default()
     };
-    let member_status = create_api_member_status(user);
-    let trip_leader_status = create_api_trip_leader_status(user);
-    let position = create_api_position(user);
-    let last_updated = create_api_last_updated(user);
 
     api::Person {
         names: Some(vec![name]),
@@ -620,12 +584,7 @@ fn create_api_person(user: &User, group_resource_name: &str) -> api::Person {
         addresses: Some(vec![address]),
         phone_numbers: Some(vec![phone_number]),
         memberships: Some(vec![membership]),
-        user_defined: Some(vec![
-            member_status,
-            trip_leader_status,
-            position,
-            last_updated,
-        ]),
+        user_defined: person_user_defined_update_or_insert(user, None),
         ..Default::default()
     }
 }
@@ -676,6 +635,10 @@ fn person_addresses_update_or_insert(
     }
 }
 
+// This function is used for both creating a new Person and for updating an existing Person.
+// In the new-Person (user_define==None) case, this function does more than it needs to but that is
+// fine.  In the existing-Person (user_define==Some(...)) case, the existing entries will be
+// updated.
 fn person_user_defined_update_or_insert(
     user: &User,
     user_defined: Option<Vec<api::UserDefined>>,
