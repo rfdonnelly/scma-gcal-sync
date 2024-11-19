@@ -1,5 +1,5 @@
-use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_rustls::HttpsConnector;
+use hyper_util::client::legacy::connect::HttpConnector;
 
 // For hyper connections
 pub(crate) type Connector = HttpsConnector<HttpConnector>;

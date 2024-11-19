@@ -5,10 +5,7 @@ use crate::GAuth;
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api, CalendarHub};
-use hyper_util::{
-    client::legacy::Client,
-    rt::TokioExecutor,
-};
+use hyper_util::{client::legacy::Client, rt::TokioExecutor};
 use tracing::{debug, info, trace};
 
 use std::collections::HashSet;

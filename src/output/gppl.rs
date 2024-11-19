@@ -3,10 +3,7 @@ use crate::output::GAuth;
 use crate::Connector;
 
 use google_people1::{api, FieldMask, PeopleService};
-use hyper_util::{
-    client::legacy::Client,
-    rt::TokioExecutor,
-};
+use hyper_util::{client::legacy::Client, rt::TokioExecutor};
 use indexmap::IndexMap;
 use tap::prelude::*;
 use tracing::{debug, info, trace};
@@ -20,7 +17,13 @@ const PEOPLE_BATCH_CREATE_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_UPDATE_MAX_CONTACTS: usize = 50;
 const GROUP_FIELDS: &[&str] = &["name"];
-const PERSON_FIELDS_GET: &[&str] = &["addressesl", "emailAddressesl", "namesl", "phoneNumbersl", "userDefined"];
+const PERSON_FIELDS_GET: &[&str] = &[
+    "addressesl",
+    "emailAddressesl",
+    "namesl",
+    "phoneNumbersl",
+    "userDefined",
+];
 const PERSON_FIELDS_UPDATE: &[&str] = &["addresses", "phoneNumbers", "userDefined"];
 
 /// Synchronizes SCMA members with Google Contacts using the algorithm below.
