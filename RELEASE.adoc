@@ -11,11 +11,37 @@ This project uses https://opensource.axo.dev/cargo-dist/[cargo-dist] and https:/
 
 == Create a Release
 
- cargo release <version>
+Reference: https://opensource.axo.dev/cargo-dist/book/workspaces/cargo-release-guide.html#using-cargo-release-with-pull-requests[Using cargo-release with Pull Requests]
 
-E.g.
+. Create a release branch
++
+ git checkout -b $BRANCH
 
- cargo release 1.0.1
+. Update CHANGELOG
++
+ vim CHANGELOG.md
+ git add -p
+ git commit
+
+. Update version in `Cargo.toml`, add, commit, and push
++
+ cargo release --no-publish --no-tag --allow-branch $BRANCH $VERSION
++
+E.g.,
++
+ cargo release --no-public --no-tag --allow-branch r1.0.1 1.0.1
+
+. Open a PR, review, and merge to main
+
+. Pull main, dist plan
++
+ git checkout main
+ git pull
+ dist plan
+
+. Tag, push tag, trigger dist
++
+ cargo release
 
 == Sit Back and Relax
 
