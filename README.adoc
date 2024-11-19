@@ -6,6 +6,8 @@ image:https://github.com/rfdonnelly/scma-gcal-sync/actions/workflows/shared-cale
 
 Synchronizes link:https://rockclimbing.org[Southern California Mountaineers Association (SCMA)] calendar events to Google Calendar.
 
+image::dataflow.drawio.svg[]
+
 == The Calendar
 
 The shared calendar is available to SCMA members.
