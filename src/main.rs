@@ -1,4 +1,4 @@
-use scma_gcal_sync::{DateSelect, Event, GAuth, GCal, GPpl, Web};
+use scma_gsync::{DateSelect, Event, GAuth, GCal, GPpl, Web};
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
