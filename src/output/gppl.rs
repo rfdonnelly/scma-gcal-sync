@@ -580,7 +580,7 @@ fn insert_or_remove_user_defined(
 ) {
     match value {
         Some(value) => user_defined.insert(key.to_string(), value.to_string()),
-        None => user_defined.remove(key),
+        None => user_defined.shift_remove(key),
     };
 }
 
