@@ -1846,6 +1846,7 @@ dependencies = [
  "indexmap 2.6.0",
  "insta",
  "reqwest",
+ "rustls",
  "select",
  "serde",
  "serde_json",

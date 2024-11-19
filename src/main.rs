@@ -202,6 +202,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Cli::parse();
 
+    rustls::crypto::aws_lc_rs::default_provider().install_default().unwrap();
+
     match args.data_type {
         DataType::Events => process_events(args).await,
         DataType::Users => process_users(args).await,
