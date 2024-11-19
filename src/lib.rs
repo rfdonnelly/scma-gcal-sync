@@ -1,4 +1,4 @@
-use hyper::client::HttpConnector;
+use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_rustls::HttpsConnector;
 
 // For hyper connections

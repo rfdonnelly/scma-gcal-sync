@@ -2,7 +2,11 @@ use crate::model::User;
 use crate::output::GAuth;
 use crate::Connector;
 
-use google_people1::{api, PeopleService};
+use google_people1::{api, FieldMask, PeopleService};
+use hyper_util::{
+    client::legacy::Client,
+    rt::TokioExecutor,
+};
 use indexmap::IndexMap;
 use tap::prelude::*;
 use tracing::{debug, info, trace};
@@ -15,9 +19,9 @@ const CONTACT_GROUPS_GET_MAX_MEMBERS: i32 = 999;
 const PEOPLE_BATCH_CREATE_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_UPDATE_MAX_CONTACTS: usize = 50;
-const GROUP_FIELDS: &str = "name";
-const PERSON_FIELDS_GET: &str = "addresses,emailAddresses,names,phoneNumbers,userDefined";
-const PERSON_FIELDS_UPDATE: &str = "addresses,phoneNumbers,userDefined";
+const GROUP_FIELDS: &[&str] = &["name"];
+const PERSON_FIELDS_GET: &[&str] = &["addressesl", "emailAddressesl", "namesl", "phoneNumbersl", "userDefined"];
+const PERSON_FIELDS_UPDATE: &[&str] = &["addresses", "phoneNumbers", "userDefined"];
 
 /// Synchronizes SCMA members with Google Contacts using the algorithm below.
 ///
@@ -144,8 +148,8 @@ impl GPpl {
                 .collect();
             let req = api::BatchUpdateContactsRequest {
                 contacts: Some(contacts),
-                read_mask: Some(PERSON_FIELDS_GET.to_string()),
-                update_mask: Some(PERSON_FIELDS_UPDATE.to_string()),
+                read_mask: Some(FieldMask::new(PERSON_FIELDS_GET)),
+                update_mask: Some(FieldMask::new(PERSON_FIELDS_UPDATE)),
                 ..Default::default()
             };
 
@@ -178,13 +182,13 @@ impl GPpl {
         info!(expiration_time=?token.expiration_time(), "Got token");
 
         let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_native_roots()
+            .with_native_roots()?
             .https_only()
             .enable_http1()
             .build();
-        let client = hyper::Client::builder().build(https);
+        let client = Client::builder(TokioExecutor::new()).build(https);
 
-        let hub = PeopleService::new(client, gauth.into());
+        let hub = PeopleService::new(client, gauth.auth());
 
         Ok(hub)
     }
@@ -201,7 +205,7 @@ impl GPpl {
         let (rsp, list) = hub
             .contact_groups()
             .list()
-            .group_fields(GROUP_FIELDS)
+            .group_fields(FieldMask::new(GROUP_FIELDS))
             .add_scope(SCOPE)
             .doit()
             .await?;
@@ -230,7 +234,7 @@ impl GPpl {
                             name: Some(group_name.to_string()),
                             ..Default::default()
                         }),
-                        read_group_fields: Some(GROUP_FIELDS.to_string()),
+                        read_group_fields: Some(FieldMask::new(GROUP_FIELDS)),
                     };
                     let (rsp, group) = hub
                         .contact_groups()
@@ -263,7 +267,7 @@ impl GPpl {
             .contact_groups()
             .get(group_resource_name)
             .max_members(CONTACT_GROUPS_GET_MAX_MEMBERS)
-            .group_fields(GROUP_FIELDS)
+            .group_fields(FieldMask::new(GROUP_FIELDS))
             .add_scope(SCOPE)
             .doit()
             .await?;
@@ -316,7 +320,7 @@ impl GPpl {
             .hub
             .people()
             .get_batch_get()
-            .person_fields(PERSON_FIELDS_GET);
+            .person_fields(FieldMask::new(PERSON_FIELDS_GET));
 
         for resource_name in resource_names {
             builder = builder.add_resource_names(resource_name);

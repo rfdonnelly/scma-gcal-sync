@@ -5,6 +5,10 @@ use crate::GAuth;
 use chrono::Duration;
 use futures::{stream, StreamExt, TryStreamExt};
 use google_calendar3::{api, CalendarHub};
+use hyper_util::{
+    client::legacy::Client,
+    rt::TokioExecutor,
+};
 use tracing::{debug, info, trace};
 
 use std::collections::HashSet;
@@ -90,13 +94,13 @@ impl GCal {
         info!(expiration_time=?token.expiration_time(), "Got token");
 
         let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_native_roots()
+            .with_native_roots()?
             .https_only()
             .enable_http1()
             .build();
-        let client = hyper::Client::builder().build(https);
+        let client = Client::builder(TokioExecutor::new()).build(https);
 
-        let hub = CalendarHub::new(client, gauth.into());
+        let hub = CalendarHub::new(client, gauth.auth());
 
         Ok(hub)
     }
@@ -424,7 +428,7 @@ fn event_summary(event: &Event) -> String {
 
 fn event_start(event: &Event) -> api::EventDateTime {
     api::EventDateTime {
-        date: Some(event.start_date.to_string()),
+        date: Some(event.start_date),
         ..Default::default()
     }
 }
@@ -435,7 +439,7 @@ fn event_end(event: &Event) -> api::EventDateTime {
     let end_date = event.end_date + Duration::days(1);
 
     api::EventDateTime {
-        date: Some(end_date.to_string()),
+        date: Some(end_date),
         ..Default::default()
     }
 }

@@ -49,13 +49,7 @@ impl GAuth {
         Ok(Self { auth })
     }
 
-    pub fn auth(&self) -> &Authenticator<Connector> {
-        &self.auth
-    }
-}
-
-impl From<GAuth> for Authenticator<Connector> {
-    fn from(gauth: GAuth) -> Self {
-        gauth.auth
+    pub fn auth(&self) -> Authenticator<Connector> {
+        self.auth.clone()
     }
 }
