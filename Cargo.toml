@@ -1,6 +1,6 @@
 [package]
 name = "scma-gsync"
-version = "2.3.1"
+version = "2.3.2"
 edition = "2021"
 authors = ["Rob Donnelly <rfdonnelly@gmail.com>"]
 description = "Synchronizes Southern California Mountaineers Association (SCMA) calendar events to Google Calendar"
