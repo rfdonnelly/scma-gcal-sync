@@ -1,6 +1,6 @@
 = Administrators Guide
 
-This guide documents the use of `scma-gcal-sync` to maintain a Google Calendar for SCMA members.
+This guide documents the use of `scma-gsync` to maintain a Google Calendar for SCMA members.
 
 == Setup
 
@@ -20,8 +20,8 @@ An initial sync needs to be performed to create the calendar, add an owner, sync
 export SCMA_USERNAME=<scma-username>
 export SCMA_PASSWORD=<scma-password>
 export GOOGLE_CLIENT_SECRET_PATH=service-account.json
-scma-gcal-sync events --all --calendar-owner <email-address>
-scma-gcal-sync users --notify-acl-insert true
+scma-gsync events --all --calendar-owner <email-address>
+scma-gsync users --notify-acl-insert true
 ----
 
 == Subsequent Syncs
@@ -33,7 +33,7 @@ Subsequent syncs should be done daily to synchronize in-progress and future even
 export SCMA_USERNAME=<scma-username>
 export SCMA_PASSWORD=<scma-password>
 export GOOGLE_CLIENT_SECRET_PATH=service-account.json
-scma-gcal-sync events
-scma-gcal-sync users --notify-acl-insert true
+scma-gsync events
+scma-gsync users --notify-acl-insert true
 ----
 

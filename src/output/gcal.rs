@@ -51,7 +51,7 @@ impl From<bool> for SendNotifications {
     }
 }
 
-const CALENDAR_DESCRIPTION: &str = "This calendar is synced daily with the SCMA event calendar (https://www.rockclimbing.org/index.php/event-list/events-list) by scma-gcal-sync (https://github.com/rfdonnelly/scma-gcal-sync).";
+const CALENDAR_DESCRIPTION: &str = "This calendar is synced daily with the SCMA event calendar (https://www.rockclimbing.org/index.php/event-list/events-list) by scma-gsync (https://github.com/rfdonnelly/scma-gsync).";
 const DESCRIPTION_BUFFER_SIZE: usize = 4098;
 const CONCURRENT_REQUESTS: usize = 3;
 /// The number of concurrent ACL insert/delete requests to make.  Experienced rate limiting with a
@@ -487,7 +487,7 @@ fn event_description(event: &Event) -> Result<String, Box<dyn ::std::error::Erro
     }
 
     if event.timestamp.is_some() {
-        write!(buffer, "\n\nLast synced at {} by <a href='https://github.com/rfdonnelly/scma-gcal-sync'>scma-gcal-sync</a>.", event.timestamp())?;
+        write!(buffer, "\n\nLast synced at {} by <a href='https://github.com/rfdonnelly/scma-gsync'>scma-gsync</a>.", event.timestamp())?;
     }
 
     Ok(buffer)

@@ -9,19 +9,19 @@ The following examples operate on events.
 
 Fetch events from the SCMA website and converts them to YAML.
 
- scma-gcal-sync events -u <scma-username> -p <scma-password> -o yaml > events.yml
+ scma-gsync events -u <scma-username> -p <scma-password> -o yaml > events.yml
 
 === YAML to Google Calendar
 
 Read events from a YAML file and sync them to Google Calendar.
 
- scma-gcal-sync events -i yaml --ifile events.yml
+ scma-gsync events -i yaml --ifile events.yml
 
 === SCMA to Google Calendar
 
 Fetch events from the SCMA website and sync them to Google Calendar.
 
- scma-gcal-sync events -u <scma-username> -p <scma-password>
+ scma-gsync events -u <scma-username> -p <scma-password>
 
 == Users
 
@@ -31,29 +31,29 @@ The following examples operate on users.
 
 Fetch users from the SCMA website and converts them to YAML.
 
- scma-gcal-sync users -u <scma-username> -p <scma-password> -o yaml > users.yml
+ scma-gsync users -u <scma-username> -p <scma-password> -o yaml > users.yml
 
 === YAML to Google Calendar
 
 Read users from a YAML file and sync them to the Access Control List (ACL) for Google Calendar.
 
- scma-gcal-sync users -i yaml --ifile users.yml
+ scma-gsync users -i yaml --ifile users.yml
 
 === SCMA to Google Calendar
 
 Fetch users from the SCMA website and sync them to the Access Control List (ACL) for Google Calendar.
 
- scma-gcal-sync users -u <scma-username> -p <scma-password>
+ scma-gsync users -u <scma-username> -p <scma-password>
 
 === YAML to Google Contacts
 
 Reads users from a YAML file and sync them to Google Contacts.
 
- scma-gcal-sync users -i yaml --ifile users.yml -o gppl
+ scma-gsync users -i yaml --ifile users.yml -o gppl
 
 === SCMA to Google Contacts
 
 Fetch users from the SCMA website and sync them to Google Contacts.
 
- scma-gcal-sync users -u <scma-username> -p <scma-password> -o gppl
+ scma-gsync users -u <scma-username> -p <scma-password> -o gppl
 

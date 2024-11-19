@@ -1830,7 +1830,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "scma-gcal-sync"
+name = "scma-gsync"
 version = "2.3.0"
 dependencies = [
  "anyhow",

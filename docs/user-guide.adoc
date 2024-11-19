@@ -1,6 +1,6 @@
 = User Guide
 
-This guide documents the use of `scma-gcal-sync` to synchronize SCMA member contact information to Google Contacts.
+This guide documents the use of `scma-gsync` to synchronize SCMA member contact information to Google Contacts.
 
 == Setup
 
@@ -29,7 +29,7 @@ If an email is found in the "SCMA" Google Contacts group but not found in the SC
 
 [source,sh]
 ----
-scma-gcal-sync users --username <scma-username> --password <scma-password> --secret-file oauth-client-secret.json --output gppl
+scma-gsync users --username <scma-username> --password <scma-password> --secret-file oauth-client-secret.json --output gppl
 ----
 
 == Subsequent Syncs
@@ -42,5 +42,5 @@ export SCMA_USERNAME=<scma-username>
 export SCMA_PASSWORD=<scma-password>
 export GOOGLE_CLIENT_SECRET_PATH=oauth-client-secret.json
 export GOOGLE_OAUTH_TOKEN_PATH=token.json
-scma-gcal-sync users --output gppl
+scma-gsync users --output gppl
 ----
