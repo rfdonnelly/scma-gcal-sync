@@ -6,6 +6,7 @@ authors = ["Rob Donnelly <rfdonnelly@gmail.com>"]
 description = "Synchronizes Southern California Mountaineers Association (SCMA) calendar events to Google Calendar"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rfdonnelly/scma-gsync"
+publish = false
 
 [profile.release]
 strip = true
