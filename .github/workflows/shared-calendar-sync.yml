@@ -13,13 +13,13 @@ jobs:
       - name: Download latest release
         uses: robinraju/release-downloader@v1.8
         with:
-          repository: rfdonnelly/scma-gcal-sync
+          repository: rfdonnelly/scma-gsync
           latest: true
-          fileName: scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz
+          fileName: scma-gsync-x86_64-unknown-linux-gnu.tar.xz
       - name: Extract release
         run: |
-          tar xf scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync
-          mv scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync scma-gcal-sync
+          tar xf scma-gsync-x86_64-unknown-linux-gnu.tar.xz scma-gsync-x86_64-unknown-linux-gnu/scma-gsync
+          mv scma-gsync-x86_64-unknown-linux-gnu/scma-gsync scma-gsync
       - name: Populate credentials
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -30,7 +30,7 @@ jobs:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
           RUST_BACKTRACE: 1
-        run: ./scma-gcal-sync events --input web --output gcal --calendar SCMA --auth-type service-account --secret-file secret-service-account.json
+        run: ./scma-gsync events --input web --output gcal --calendar SCMA --auth-type service-account --secret-file secret-service-account.json
       - name: Populate email aliases
         env:
           EMAIL_ALIASES: ${{ secrets.EMAIL_ALIASES }}
@@ -42,4 +42,4 @@ jobs:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
           RUST_BACKTRACE: 1
-        run: ./scma-gcal-sync users --input web --output gcal --calendar SCMA --email-aliases-file email-aliases.yml --auth-type service-account --secret-file secret-service-account.json --notify-acl-insert true
+        run: ./scma-gsync users --input web --output gcal --calendar SCMA --email-aliases-file email-aliases.yml --auth-type service-account --secret-file secret-service-account.json --notify-acl-insert true

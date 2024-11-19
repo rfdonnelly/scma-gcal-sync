@@ -13,13 +13,13 @@ jobs:
       - name: Download latest release
         uses: robinraju/release-downloader@v1.8
         with:
-          repository: rfdonnelly/scma-gcal-sync
+          repository: rfdonnelly/scma-gsync
           latest: true
-          fileName: scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz
+          fileName: scma-gsync-x86_64-unknown-linux-gnu.tar.xz
       - name: Extract release
         run: |
-          tar xf scma-gcal-sync-x86_64-unknown-linux-gnu.tar.xz scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync
-          mv scma-gcal-sync-x86_64-unknown-linux-gnu/scma-gcal-sync scma-gcal-sync
+          tar xf scma-gsync-x86_64-unknown-linux-gnu.tar.xz scma-gsync-x86_64-unknown-linux-gnu/scma-gsync
+          mv scma-gsync-x86_64-unknown-linux-gnu/scma-gsync scma-gsync
       - name: Populate credentials
         env:
           GOOGLE_OAUTH_CLIENT_SECRET_JSON: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_JSON }}
@@ -31,5 +31,5 @@ jobs:
         env:
           SCMA_USERNAME: ${{ secrets.SCMA_USERNAME }}
           SCMA_PASSWORD: ${{ secrets.SCMA_PASSWORD }}
-        run: ./scma-gcal-sync users --input web --output gppl --group SCMA --auth-type oauth --secret-file secret-oauth.json --token-file token.json
+        run: ./scma-gsync users --input web --output gppl --group SCMA --auth-type oauth --secret-file secret-oauth.json --token-file token.json
 
