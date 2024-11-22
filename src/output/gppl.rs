@@ -18,10 +18,10 @@ const PEOPLE_BATCH_GET_MAX_CONTACTS: usize = 50;
 const PEOPLE_BATCH_UPDATE_MAX_CONTACTS: usize = 50;
 const GROUP_FIELDS: &[&str] = &["name"];
 const PERSON_FIELDS_GET: &[&str] = &[
-    "addressesl",
-    "emailAddressesl",
-    "namesl",
-    "phoneNumbersl",
+    "addresses",
+    "emailAddresses",
+    "names",
+    "phoneNumbers",
     "userDefined",
 ];
 const PERSON_FIELDS_UPDATE: &[&str] = &["addresses", "phoneNumbers", "userDefined"];
